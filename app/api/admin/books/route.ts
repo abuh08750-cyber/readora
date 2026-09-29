@@ -42,12 +42,14 @@ export async function POST(req: Request) {
 
     const { data: ebookData } = supabase.storage.from("ebooks").getPublicUrl(ebookPath);
 
+    // database insert - file_path aur file_url dono save kar rahe hain
     const { error: dbErr } = await supabase.from("books").insert({
       title,
       author,
       category,
       description,
       cover_url,
+      file_path: ebookPath,
       file_url: ebookData.publicUrl,
       published: true
     });
@@ -60,5 +62,4 @@ export async function POST(req: Request) {
   } catch (err: any) {
     return NextResponse.json({ error: err.message || "Upload failed" }, { status: 500 });
   }
-          }
-    
+}
