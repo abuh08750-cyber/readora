@@ -1,72 +1,89 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { supabaseServer } from "@/lib/supabase-server";
+"use client";
 
-type PageProps = {
-  params: Promise<{
-    id: string;
-  }>;
-};
+import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabaseBrowser } from "@/lib/supabase-browser";
 
-export default async function ReaderPage({ params }: PageProps) {
-  const { id } = await params;
-  const supabase = await supabaseServer();
+export default function LoginPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const { data: book, error } = await supabase
-    .from("books")
-    .select("id, title, author, description, file_path")
-    .eq("id", id)
-    .single();
+  const handleLogin = async (e: FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setErrorMsg("");
 
-  if (error || !book) {
-    notFound();
-  }
+    const supabase = supabaseBrowser();
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-  const { data: fileData, error: fileError } = await supabase
-    .storage
-    .from("ebooks")
-    .createSignedUrl(book.file_path, 60 * 60);
-
-  if (fileError || !fileData?.signedUrl) {
-    return (
-      <main className="wrap">
-        <Link href="/">← Back to Readora</Link>
-
-        <h1>{book.title}</h1>
-
-        <p>
-          The ebook file could not be opened right now.
-        </p>
-      </main>
-    );
-  }
+    if (error) {
+      setErrorMsg(error.message);
+      setLoading(false);
+    } else {
+      router.push("/admin");
+      router.refresh();
+    }
+  };
 
   return (
-    <main className="wrap">
-      <Link href="/">← Back to Readora</Link>
-
+    <main className="wrap" style={{ maxWidth: "420px", marginTop: "60px" }}>
       <div className="panel">
         <span className="eyebrow">READORA</span>
+        <h1 style={{ marginBottom: "20px" }}>Admin Login</h1>
 
-        <h1>{book.title}</h1>
+        {errorMsg && (
+          <p style={{ color: "red", marginBottom: "16px", fontSize: "14px" }}>
+            {errorMsg}
+          </p>
+        )}
 
-        <p>
-          <strong>Author:</strong> {book.author}
-        </p>
+        <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          <div>
+            <label style={{ display: "block", marginBottom: "6px", fontSize: "14px" }}>Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #ccc" }}
+            />
+          </div>
 
-        {book.description && <p>{book.description}</p>}
+          <div>
+            <label style={{ display: "block", marginBottom: "6px", fontSize: "14px" }}>Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #ccc" }}
+            />
+          </div>
 
-        <div style={{ marginTop: "24px" }}>
-          <a
-            href={fileData.signedUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              padding: "12px",
+              backgroundColor: "#000",
+              color: "#fff",
+              border: "none",
+              borderRadius: "6px",
+              cursor: loading ? "not-allowed" : "pointer",
+              marginTop: "10px"
+            }}
           >
-            Open eBook
-          </a>
-        </div>
+            {loading ? "Logging in..." : "Login"}
+          </button>
+        </form>
       </div>
     </main>
   );
-          }
-          
+            }
+                      
