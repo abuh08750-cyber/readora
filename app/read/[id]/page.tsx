@@ -1,89 +1,76 @@
-"use client";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { supabaseServer } from "@/lib/supabase-server";
 
-import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
-import { supabaseBrowser } from "@/lib/supabase-browser";
+type PageProps = {
+  params: Promise<{
+    id: string;
+  }>;
+};
 
-export default function LoginPage() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [errorMsg, setErrorMsg] = useState("");
-  const [loading, setLoading] = useState(false);
+export const revalidate = 0;
 
-  const handleLogin = async (e: FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setErrorMsg("");
+export default async function ReaderPage({ params }: PageProps) {
+  const { id } = await params;
+  const supabase = await supabaseServer();
 
-    const supabase = supabaseBrowser();
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+  // Book details fetch karna
+  const { data: book, error } = await supabase
+    .from("books")
+    .select("id, title, author, description, file_path, file_url")
+    .eq("id", id)
+    .single();
 
-    if (error) {
-      setErrorMsg(error.message);
-      setLoading(false);
-    } else {
-      router.push("/admin");
-      router.refresh();
-    }
-  };
+  if (error || !book) {
+    return notFound();
+  }
+
+  // Agar file_url direct hai toh wahi use karo, warna storage se public url banao
+  let readUrl = book.file_url;
+  if (!readUrl && book.file_path) {
+    const { data } = supabase.storage.from("ebooks").getPublicUrl(book.file_path);
+    readUrl = data.publicUrl;
+  }
 
   return (
-    <main className="wrap" style={{ maxWidth: "420px", marginTop: "60px" }}>
-      <div className="panel">
-        <span className="eyebrow">READORA</span>
-        <h1 style={{ marginBottom: "20px" }}>Admin Login</h1>
+    <main style={{ maxWidth: "680px", margin: "40px auto", padding: "0 20px", fontFamily: "sans-serif" }}>
+      <Link href="/" style={{ color: "#555", textDecoration: "none", fontSize: "14px", display: "inline-block", marginBottom: "20px" }}>
+        ← Back to Readora
+      </Link>
 
-        {errorMsg && (
-          <p style={{ color: "red", marginBottom: "16px", fontSize: "14px" }}>
-            {errorMsg}
+      <div style={{ border: "1px solid #eaeaea", borderRadius: "12px", padding: "24px", backgroundColor: "#fff", boxShadow: "0 4px 6px rgba(0,0,0,0.05)" }}>
+        <span style={{ fontSize: "12px", fontWeight: "bold", color: "#e056fd", letterSpacing: "1px" }}>READORA EBOOK</span>
+        <h1 style={{ margin: "12px 0 6px 0", fontSize: "28px" }}>{book.title}</h1>
+        <p style={{ margin: "0 0 16px 0", color: "#666", fontSize: "16px" }}>
+          <strong>Author:</strong> {book.author}
+        </p>
+
+        {book.description && (
+          <p style={{ color: "#444", lineHeight: "1.6", borderTop: "1px solid #f0f0f0", paddingTop: "14px", marginTop: "14px" }}>
+            {book.description}
           </p>
         )}
 
-        <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-          <div>
-            <label style={{ display: "block", marginBottom: "6px", fontSize: "14px" }}>Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #ccc" }}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: "block", marginBottom: "6px", fontSize: "14px" }}>Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #ccc" }}
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
+        <div style={{ marginTop: "28px" }}>
+          <a
+            href={readUrl}
+            target="_blank"
+            rel="noopener noreferrer"
             style={{
-              padding: "12px",
+              display: "inline-block",
               backgroundColor: "#000",
               color: "#fff",
-              border: "none",
-              borderRadius: "6px",
-              cursor: loading ? "not-allowed" : "pointer",
-              marginTop: "10px"
+              padding: "12px 24px",
+              borderRadius: "8px",
+              textDecoration: "none",
+              fontWeight: "600"
             }}
           >
-            {loading ? "Logging in..." : "Login"}
-          </button>
-        </form>
+            Open / Read eBook
+          </a>
+        </div>
       </div>
     </main>
   );
-            }
-                      
+                }
+          
