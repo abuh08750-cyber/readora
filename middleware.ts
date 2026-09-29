@@ -1,16 +1,21 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
-  const path = request.nextUrl.pathname;
+  const { pathname } = request.nextUrl;
 
-  // Sirf /admin ko protect karo, baaki sab public ke liye khula rahe
-  if (path.startsWith("/admin")) {
-    const sessionCookie = request.cookies.get("sb-access-token") || request.cookies.get("supabase-auth-token");
-    
-    // Agar auth token nahi milta toh login par bhejo
-    if (!sessionCookie) {
-      return NextResponse.redirect(new URL("/login", request.url));
-    }
+  // Agar user /read, home page, static files ya images par hai toh direct aane do
+  if (!pathname.startsWith("/admin")) {
+    return NextResponse.next();
+  }
+
+  // Sirf /admin route ke liye login check karo
+  const token =
+    request.cookies.get("sb-access-token")?.value ||
+    request.cookies.get("supabase-auth-token")?.value;
+
+  if (!token) {
+    const loginUrl = new URL("/login", request.url);
+    return NextResponse.redirect(loginUrl);
   }
 
   return NextResponse.next();
