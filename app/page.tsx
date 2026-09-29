@@ -1,14 +1,12 @@
 import { supabaseServer } from "@/lib/supabase-server";
-import Link from "next/link";
+import { redirect } from "next/navigation";
+import AdminForm from "@/components/AdminForm";
 
-export default async function Home({searchParams}:{searchParams:Promise<{q?:string}>}) {
-  const q=(await searchParams).q?.trim()||"";
-  const supabase=await supabaseServer();
-  let query=supabase.from("books").select("id,title,author,category,cover_path,file_type").eq("published",true).order("created_at",{ascending:false}).limit(40);
-  if(q) query=query.or(`title.ilike.%${q}%,author.ilike.%${q}%,category.ilike.%${q}%`);
-  const {data:books=[]}=await query;
-  return <><header className="top"><div className="brand"><span>R</span>Readora</div><Link href="/admin">Admin</Link></header>
-  <main><section className="hero"><div><span className="eyebrow">YOUR DIGITAL READING ROOM</span><h1>Thousands of stories.<br/><i>One beautiful library.</i></h1><p>Discover and read your eBooks in one simple place.</p>
-  <form className="search"><input name="q" defaultValue={q} placeholder="Search books, authors or categories…"/><button className="btn">Search</button></form></div><div><div className="panel"><span className="eyebrow">READORA</span><h2>Read anywhere.</h2><p>Private eBook files are delivered through short-lived signed URLs, while public metadata stays searchable.</p></div></div></section>
-  <div className="ad">ADVERTISEMENT</div><section className="wrap"><span className="eyebrow">EXPLORE</span><h2>Library</h2><div className="grid">{books.map(b=><article className="card" key={b.id}><div className="cover">{b.title}</div><div className="card-body"><b>{b.title}</b><p>{b.author} · {b.category}</p><Link className="btn" href={`/read/${b.id}`}>Read now →</Link></div></article>)}</div>{!books.length&&<p>No books found.</p>}</section></main></>;
+export default async function AdminPage(){
+ const supabase=await supabaseServer(); const {data:{user}}=await supabase.auth.getUser();
+ if(!user) redirect("/");
+ const {data:admin}=await supabase.from("admins").select("user_id").eq("user_id",user.id).maybeSingle();
+ if(!admin) return <main className="wrap"><h2>Admin access required</h2><p>Your account is signed in, but it is not on the admin allowlist.</p></main>;
+ const {data:books=[]}=await supabase.from("books").select("id,title,author,category,published,created_at").order("created_at",{ascending:false});
+ return <main className="admin"><span className="eyebrow">READORA</span><h1>Admin dashboard</h1><div className="panel"><AdminForm/></div><div className="panel"><h2>Books</h2><table className="table"><thead><tr><th>Title</th><th>Author</th><th>Category</th><th>Status</th></tr></thead><tbody>{books.map(b=><tr key={b.id}><td>{b.title}</td><td>{b.author}</td><td>{b.category}</td><td>{b.published?"Published":"Draft"}</td></tr>)}</tbody></table></div></main>
 }
