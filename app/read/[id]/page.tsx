@@ -14,7 +14,6 @@ export default async function ReaderPage({ params }: PageProps) {
   const { id } = await params;
   const supabase = await supabaseServer();
 
-  // Book details fetch karna
   const { data: book, error } = await supabase
     .from("books")
     .select("id, title, author, description, file_path, file_url")
@@ -25,7 +24,6 @@ export default async function ReaderPage({ params }: PageProps) {
     return notFound();
   }
 
-  // Agar file_url direct hai toh wahi use karo, warna storage se public url banao
   let readUrl = book.file_url;
   if (!readUrl && book.file_path) {
     const { data } = supabase.storage.from("ebooks").getPublicUrl(book.file_path);
@@ -33,44 +31,22 @@ export default async function ReaderPage({ params }: PageProps) {
   }
 
   return (
-    <main style={{ maxWidth: "680px", margin: "40px auto", padding: "0 20px", fontFamily: "sans-serif" }}>
-      <Link href="/" style={{ color: "#555", textDecoration: "none", fontSize: "14px", display: "inline-block", marginBottom: "20px" }}>
-        ← Back to Readora
-      </Link>
+    <main style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "#0b0f17", color: "#fff" }}>
+      <header style={{ padding: "12px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #222", backgroundColor: "#05070a" }}>
+        <Link href="/" style={{ color: "#aaa", textDecoration: "none", fontSize: "14px" }}>
+          ← Back to Readora
+        </Link>
+        <span style={{ fontSize: "15px", fontWeight: "bold" }}>{book.title}</span>
+        <span style={{ fontSize: "12px", color: "#888" }}>{book.author}</span>
+      </header>
 
-      <div style={{ border: "1px solid #eaeaea", borderRadius: "12px", padding: "24px", backgroundColor: "#fff", boxShadow: "0 4px 6px rgba(0,0,0,0.05)" }}>
-        <span style={{ fontSize: "12px", fontWeight: "bold", color: "#e056fd", letterSpacing: "1px" }}>READORA EBOOK</span>
-        <h1 style={{ margin: "12px 0 6px 0", fontSize: "28px" }}>{book.title}</h1>
-        <p style={{ margin: "0 0 16px 0", color: "#666", fontSize: "16px" }}>
-          <strong>Author:</strong> {book.author}
-        </p>
-
-        {book.description && (
-          <p style={{ color: "#444", lineHeight: "1.6", borderTop: "1px solid #f0f0f0", paddingTop: "14px", marginTop: "14px" }}>
-            {book.description}
-          </p>
-        )}
-
-        <div style={{ marginTop: "28px" }}>
-          <a
-            href={readUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: "inline-block",
-              backgroundColor: "#000",
-              color: "#fff",
-              padding: "12px 24px",
-              borderRadius: "8px",
-              textDecoration: "none",
-              fontWeight: "600"
-            }}
-          >
-            Open / Read eBook
-          </a>
-        </div>
+      <div style={{ flex: 1, width: "100%", height: "calc(100vh - 55px)" }}>
+        <iframe
+          src={readUrl}
+          title={book.title}
+          style={{ width: "100%", height: "100%", border: "none" }}
+        />
       </div>
     </main>
   );
-                }
-          
+}
