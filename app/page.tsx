@@ -1,12 +1,13 @@
 import { supabaseServer } from "@/lib/supabase-server";
-import { redirect } from "next/navigation";
-import AdminForm from "@/components/AdminForm";
+import { notFound } from "next/navigation";
+import Link from "next/link";
 
-export default async function AdminPage(){
- const supabase=await supabaseServer(); const {data:{user}}=await supabase.auth.getUser();
- if(!user) redirect("/");
- const {data:admin}=await supabase.from("admins").select("user_id").eq("user_id",user.id).maybeSingle();
- if(!admin) return <main className="wrap"><h2>Admin access required</h2><p>Your account is signed in, but it is not on the admin allowlist.</p></main>;
- const {data:books=[]}=await supabase.from("books").select("id,title,author,category,published,created_at").order("created_at",{ascending:false});
- return <main className="admin"><span className="eyebrow">READORA</span><h1>Admin dashboard</h1><div className="panel"><AdminForm/></div><div className="panel"><h2>Books</h2><table className="table"><thead><tr><th>Title</th><th>Author</th><th>Category</th><th>Status</th></tr></thead><tbody>{books.map(b=><tr key={b.id}><td>{b.title}</td><td>{b.author}</td><td>{b.category}</td><td>{b.published?"Published":"Draft"}</td></tr>)}</tbody></table></div></main>
+export default async function Reader({params}:{params:Promise<{id:string}>}) {
+  const {id}=await params; const supabase=await supabaseServer();
+  const {data:book}=await supabase.from("books").select("id,title,author,category,file_type,file_path").eq("id",id).eq("published",true).single();
+  if(!book) notFound();
+  const {data}=await supabase.storage.from("ebooks").createSignedUrl(book.file_path,600);
+  return <><header className="top"><Link href="/">← Readora</Link><span>{book.title}</span></header>
+  <div className="ad">ADVERTISEMENT</div><main className="reader"><div className="toolbar"><div><span className="eyebrow">NOW READING</span><h2>{book.title}</h2><p>{book.author} · {book.category}</p></div>{data?.signedUrl&&<a className="btn" href={data.signedUrl} target="_blank">Open file</a>}</div>
+  <div className="paper"><h2>{book.title}</h2><p>This reader delivers your licensed/public-domain eBook through a temporary signed URL. For PDFs, the browser can open the file directly. EPUB support can be added with an EPUB.js reader component.</p><p>Signed access expires automatically for security.</p></div></main></>;
 }
