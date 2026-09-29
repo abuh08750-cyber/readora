@@ -30,7 +30,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const ebookExt = ebookFile.name.split(".").pop();
+    const ebookExt = ebookFile.name.split(".").pop()?.toLowerCase() || "html";
     const ebookPath = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ebookExt}`;
     const { error: ebookErr } = await supabase.storage
       .from("ebooks")
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
 
     const { data: ebookData } = supabase.storage.from("ebooks").getPublicUrl(ebookPath);
 
-    // database insert - file_path aur file_url dono save kar rahe hain
+    // database insert: file_type, file_path aur file_url sabhi bhej rahe hain
     const { error: dbErr } = await supabase.from("books").insert({
       title,
       author,
@@ -51,6 +51,7 @@ export async function POST(req: Request) {
       cover_url,
       file_path: ebookPath,
       file_url: ebookData.publicUrl,
+      file_type: ebookExt,
       published: true
     });
 
@@ -63,3 +64,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: err.message || "Upload failed" }, { status: 500 });
   }
 }
+  
