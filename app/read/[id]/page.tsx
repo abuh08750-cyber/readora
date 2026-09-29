@@ -30,6 +30,19 @@ export default async function ReaderPage({ params }: PageProps) {
     readUrl = data.publicUrl;
   }
 
+  // HTML content ko seedha fetch karke iframe mein inject karenge
+  let htmlContent = "";
+  if (readUrl) {
+    try {
+      const res = await fetch(readUrl, { cache: "no-store" });
+      if (res.ok) {
+        htmlContent = await res.text();
+      }
+    } catch (e) {
+      console.error("HTML fetch error:", e);
+    }
+  }
+
   return (
     <main style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "#0b0f17", color: "#fff" }}>
       <header style={{ padding: "12px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #222", backgroundColor: "#05070a" }}>
@@ -41,12 +54,20 @@ export default async function ReaderPage({ params }: PageProps) {
       </header>
 
       <div style={{ flex: 1, width: "100%", height: "calc(100vh - 55px)" }}>
-        <iframe
-          src={readUrl}
-          title={book.title}
-          style={{ width: "100%", height: "100%", border: "none" }}
-        />
+        {htmlContent ? (
+          <iframe
+            srcDoc={htmlContent}
+            title={book.title}
+            style={{ width: "100%", height: "100%", border: "none", backgroundColor: "#fff" }}
+          />
+        ) : (
+          <iframe
+            src={readUrl}
+            title={book.title}
+            style={{ width: "100%", height: "100%", border: "none" }}
+          />
+        )}
       </div>
     </main>
   );
-}
+                    }
