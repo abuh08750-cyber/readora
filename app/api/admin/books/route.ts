@@ -32,9 +32,15 @@ export async function POST(req: Request) {
 
     const ebookExt = ebookFile.name.split(".").pop()?.toLowerCase() || "html";
     const ebookPath = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ebookExt}`;
+    
+    // HTML file ko sahi web type ke sath upload karna
+    const isHtml = ebookExt === "html" || ebookExt === "htm";
     const { error: ebookErr } = await supabase.storage
       .from("ebooks")
-      .upload(ebookPath, ebookFile);
+      .upload(ebookPath, ebookFile, {
+        contentType: isHtml ? "text/html" : ebookFile.type,
+        upsert: true,
+      });
 
     if (ebookErr) {
       return NextResponse.json({ error: ebookErr.message }, { status: 500 });
@@ -42,7 +48,6 @@ export async function POST(req: Request) {
 
     const { data: ebookData } = supabase.storage.from("ebooks").getPublicUrl(ebookPath);
 
-    // database insert: file_type, file_path aur file_url sabhi bhej rahe hain
     const { error: dbErr } = await supabase.from("books").insert({
       title,
       author,
@@ -63,5 +68,5 @@ export async function POST(req: Request) {
   } catch (err: any) {
     return NextResponse.json({ error: err.message || "Upload failed" }, { status: 500 });
   }
-}
+        }
   
