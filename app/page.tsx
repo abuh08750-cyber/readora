@@ -1,36 +1,71 @@
-import { supabaseServer } from "@/lib/supabase-server";
 import Link from "next/link";
+import { supabaseServer } from "@/lib/supabase-server";
 
-export default async function Home() {
+export const revalidate = 0; // Taaki nayi upload hui book turant dikhe
+
+export default async function HomePage() {
   const supabase = await supabaseServer();
-  const { data: books } = await supabase
+
+  const { data: books, error } = await supabase
     .from("books")
-    .select("id, title, author, category, cover_path")
-    .eq("published", true)
+    .select("id, title, author, cover_url")
     .order("created_at", { ascending: false });
 
   return (
-    <main style={{ padding: "2rem", fontFamily: "sans-serif", maxWidth: "800px", margin: "0 auto" }}>
-      <header style={{ marginBottom: "2rem", textAlign: "center" }}>
-        <h1 style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>Readora</h1>
+    <main style={{ maxWidth: "600px", margin: "40px auto", padding: "0 16px", fontFamily: "sans-serif" }}>
+      <header style={{ textAlign: "center", marginBottom: "32px" }}>
+        <h1 style={{ fontSize: "36px", marginBottom: "8px" }}>Readora</h1>
         <p style={{ color: "#666" }}>Free Legal & Public Domain Books</p>
       </header>
 
       <section>
-        <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem" }}>Available Books</h2>
+        <h2 style={{ fontSize: "20px", marginBottom: "16px" }}>Available Books</h2>
+
         {(!books || books.length === 0) ? (
-          <div style={{ textAlign: "center", padding: "3rem 1rem", border: "1px dashed #ccc", borderRadius: "8px" }}>
-            <p style={{ color: "#888" }}>Abhi koi book publish nahi hui hai. Admin panel se pehli book upload karein!</p>
-          </div>
+          <p>No books available yet.</p>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "1.5rem" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             {books.map((book) => (
-              <div key={book.id} style={{ border: "1px solid #e5e5e5", borderRadius: "8px", padding: "1rem" }}>
-                <h3 style={{ margin: "0 0 0.5rem 0", fontSize: "1.2rem" }}>{book.title}</h3>
-                <p style={{ margin: "0 0 1rem 0", color: "#666", fontSize: "0.9rem" }}>{book.author}</p>
-                <Link 
+              <div
+                key={book.id}
+                style={{
+                  border: "1px solid #eee",
+                  borderRadius: "10px",
+                  padding: "16px",
+                  backgroundColor: "#fff",
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.05)"
+                }}
+              >
+                {book.cover_url && (
+                  <img
+                    src={book.cover_url}
+                    alt={book.title}
+                    style={{
+                      width: "100%",
+                      maxHeight: "240px",
+                      objectFit: "cover",
+                      borderRadius: "6px",
+                      marginBottom: "12px"
+                    }}
+                  />
+                )}
+
+                <h3 style={{ margin: "0 0 4px 0", fontSize: "18px" }}>{book.title}</h3>
+                <p style={{ margin: "0 0 16px 0", color: "#666", fontSize: "14px" }}>{book.author}</p>
+
+                {/* Sahi dynamic reader link */}
+                <Link
                   href={`/read/${book.id}`}
-                  style={{ display: "inline-block", background: "#000", color: "#fff", padding: "0.5rem 1rem", borderRadius: "4px", textDecoration: "none", fontSize: "0.85rem" }}
+                  style={{
+                    display: "inline-block",
+                    padding: "8px 16px",
+                    backgroundColor: "#000",
+                    color: "#fff",
+                    textDecoration: "none",
+                    borderRadius: "6px",
+                    fontSize: "14px",
+                    fontWeight: "500"
+                  }}
                 >
                   Read Book
                 </Link>
@@ -41,5 +76,4 @@ export default async function Home() {
       </section>
     </main>
   );
-                }
-            
+                  }
