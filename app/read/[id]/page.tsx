@@ -30,7 +30,6 @@ export default async function ReaderPage({ params }: PageProps) {
     readUrl = data.publicUrl;
   }
 
-  // HTML content ko seedha fetch karke iframe mein inject karenge
   let htmlContent = "";
   if (readUrl) {
     try {
@@ -44,30 +43,37 @@ export default async function ReaderPage({ params }: PageProps) {
   }
 
   return (
-    <main style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "#0b0f17", color: "#fff" }}>
-      <header style={{ padding: "12px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #222", backgroundColor: "#05070a" }}>
-        <Link href="/" style={{ color: "#aaa", textDecoration: "none", fontSize: "14px" }}>
-          ← Back to Readora
+    <div style={{ position: "fixed", inset: 0, display: "flex", flexDirection: "column", backgroundColor: "#0b0f17", zIndex: 9999 }}>
+      {/* Top Header */}
+      <header style={{ height: "50px", padding: "0 16px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #222", backgroundColor: "#05070a", flexShrink: 0 }}>
+        <Link href="/" style={{ color: "#aaa", textDecoration: "none", fontSize: "14px", fontWeight: "500" }}>
+          ← Back
         </Link>
-        <span style={{ fontSize: "15px", fontWeight: "bold" }}>{book.title}</span>
-        <span style={{ fontSize: "12px", color: "#888" }}>{book.author}</span>
+        <span style={{ fontSize: "14px", fontWeight: "bold", color: "#fff", maxWidth: "60%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {book.title}
+        </span>
+        <span style={{ fontSize: "12px", color: "#888" }}>
+          {book.author}
+        </span>
       </header>
 
-      <div style={{ flex: 1, width: "100%", height: "calc(100vh - 55px)" }}>
+      {/* Full Screen Reader Body */}
+      <main style={{ flex: 1, width: "100%", height: "calc(100% - 50px)", position: "relative" }}>
         {htmlContent ? (
           <iframe
             srcDoc={htmlContent}
             title={book.title}
-            style={{ width: "100%", height: "100%", border: "none", backgroundColor: "#fff" }}
+            style={{ width: "100%", height: "100%", border: "none", display: "block" }}
           />
         ) : (
           <iframe
             src={readUrl}
             title={book.title}
-            style={{ width: "100%", height: "100%", border: "none" }}
+            style={{ width: "100%", height: "100%", border: "none", display: "block" }}
           />
         )}
-      </div>
-    </main>
+      </main>
+    </div>
   );
-                    }
+          }
+            
