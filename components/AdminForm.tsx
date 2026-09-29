@@ -12,7 +12,7 @@ export default function AdminForm(){
  <input name="title" required placeholder="Book title"/><input name="author" required placeholder="Author"/>
  <input name="category" required placeholder="Category"/><textarea name="description" placeholder="Description"/>
  <label>Cover image <input name="cover" type="file" accept="image/*"/></label>
- <label>eBook file <input name="ebook" type="file" accept=".pdf,.epub" required/></label>
+ <label>eBook file <input name="ebook" type="file" accept=".pdf,.epub,.html" required/></label>
  <button className="btn" disabled={busy}>{busy?"Uploading…":"Upload eBook"}</button>{msg&&<small>{msg}</small>}
  </form>
           }
