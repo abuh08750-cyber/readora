@@ -122,7 +122,7 @@ export default function LibraryPage() {
       || activeTab === 'recent'
     return matchSearch && matchCat && matchTab
   })
-
+  
   if (readingFile && htmlData) {
     return (
       <div style={{ position: 'fixed', inset: 0, background: '#0B0F17', zIndex: 9999, display: 'flex', flexDirection: 'column' }}>
@@ -294,6 +294,9 @@ export default function LibraryPage() {
                         <span>{isLiked ? '❤️' : '🤍'}</span>
                         <span>{isLiked ? 'Liked' : 'Like'}</span>
                       </button>
+                                              <span>{isLiked ? '❤️' : '🤍'}</span>
+                        <span>{isLiked ? 'Liked' : 'Like'}</span>
+                      </button>
 
                       <button 
                         onClick={() => handleToggleSave(book.id)}
@@ -342,4 +345,36 @@ export default function LibraryPage() {
             <p style={{ margin: '0 0 6px', fontWeight: 'bold', fontSize: '14px', color: '#38bdf8' }}>{selectedBookForDetails.title}</p>
             <p style={{ margin: '0 0 10px', fontSize: '12px', color: '#94a3b8' }}>Author: {selectedBookForDetails.author || 'Readora'}</p>
             <p style={{ margin: '0 0 14px', fontSize: '12px', color: '#cbd5e1', lineHeight: 1.5 }}>
-        
+              {selectedBookForDetails.description || 'Complete artist foundation handbook covering sound selection, production basics, and mindset.'}
+            </p>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={() => { handleToggleSave(selectedBookForDetails.id); }} style={{ flex: 1, padding: '8px', borderRadius: '8px', border: '1px solid #1e293b', background: '#111827', color: '#fff', fontSize: '12px', cursor: 'pointer' }}>
+                {savedBookIds.includes(selectedBookForDetails.id) ? '🔖 Saved' : '📥 Save Book'}
+              </button>
+              <button onClick={() => { const b = selectedBookForDetails; setSelectedBookForDetails(null); handleRead(b); }} style={{ flex: 1, padding: '8px', borderRadius: '8px', border: 'none', background: '#2563eb', color: '#fff', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>
+                Read Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+          <div style={{ background: '#0d1322', border: '1px solid #1e293b', borderRadius: '16px', padding: '24px', width: '100%', maxWidth: '340px', color: '#f8fafc' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800' }}>App Settings</h3>
+              <button onClick={() => setShowSettings(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+            </div>
+            <p style={{ fontSize: '12px', color: '#94a3b8', margin: '0 0 8px' }}>Account: {user?.email || 'Guest User'}</p>
+            <p style={{ fontSize: '12px', color: '#94a3b8', margin: '0 0 16px' }}>Theme: Dark Luxury (Default)</p>
+            <button onClick={async () => { await supabase.auth.signOut(); setUser(null); setShowSettings(false); }} style={{ width: '100%', padding: '9px', borderRadius: '8px', border: 'none', background: '#dc2626', color: '#fff', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>
+              Logout
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+        }
