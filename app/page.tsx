@@ -14,94 +14,22 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   },
 })
 
-const staticBook = {
-  id: 'dfb9528e-8466-4c5f-aeab-0329ae420bf1',
-  title: 'ZERO SE ARTIST - Part 1',
-  author: 'Tiger Soul',
-  cover_path: 'https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/covers/1790700033242-teliy6.jpg',
-}
-
-const bookHtmlRaw = `<!DOCTYPE html>
-<html lang="hi">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ZERO SE ARTIST - Book 1 | By Tiger Soul</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Cinzel:wght@700;900&family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
-  <style>
-    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0B0F17; color: #E2E8F0; }
-    .font-display { font-family: 'Cinzel', serif; }
-    .font-heading { font-family: 'Outfit', sans-serif; }
-    html { scroll-behavior: smooth; }
-  </style>
-</head>
-<body class="selection:bg-amber-500 selection:text-black">
-  <main class="max-w-3xl mx-auto px-5 sm:px-8 py-10">
-    <section class="min-h-[80vh] flex flex-col justify-between p-8 rounded-3xl bg-gradient-to-b from-[#131A2A] via-[#0F172A] to-[#0A0D14] border border-amber-500/30 shadow-2xl relative mb-12 text-center">
-      <div class="my-auto py-8">
-        <p class="text-xs uppercase tracking-[0.3em] text-cyan-400 mb-2">From Zero To Your Own Sound</p>
-        <h1 class="font-display text-4xl sm:text-6xl font-black text-white mb-3">ZERO SE ARTIST</h1>
-        <h2 class="font-heading text-lg sm:text-2xl font-bold text-slate-200 mb-4">ARTIST BANNE KI SHURUAAT</h2>
-        <p class="text-xs text-amber-400 font-bold uppercase tracking-widest">Written by TIGER SOUL</p>
-      </div>
-      <div class="border-t border-slate-800 pt-4 text-xs text-slate-500">
-        Book 1 of Music Creator Series
-      </div>
-    </section>
-
-    <article class="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 text-slate-300 text-sm leading-relaxed mb-8">
-      <h3 class="font-heading text-xl font-bold text-white">Author's Note</h3>
-      <p>Agar tum ye book padh rahe ho, toh shayad tumhare andar bhi ek artist hai. Shuruaat mein expensive studio ya team hona zaroori nahi hai.</p>
-      <p class="text-amber-400 font-bold">"Start where you are, use what you have, learn as you go."</p>
-      <p class="text-right text-xs text-slate-400">— TIGER SOUL</p>
-    </article>
-
-    <article class="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 text-slate-300 text-sm leading-relaxed mb-8">
-      <span class="text-xs text-amber-400 font-bold uppercase">Chapter 01</span>
-      <h3 class="font-heading text-xl font-bold text-white">ARTIST BANNE KA DECISION</h3>
-      <p>Artist banna sirf keh dena nahi hai, ye ek decision hai. Pehle listener se creator bano. Pehle create karo, phir seekho, phir improve karo.</p>
-    </article>
-
-    <article class="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 text-slate-300 text-sm leading-relaxed mb-8">
-      <span class="text-xs text-cyan-400 font-bold uppercase">Chapter 02</span>
-      <h3 class="font-heading text-xl font-bold text-white">TUM ARTIST KYUN BANNA CHAHTE HO?</h3>
-      <p>Apna "Kyun" samjho. Jab views kam aayenge tab tumhara maksad hi tumhe aage badhayega.</p>
-    </article>
-
-    <article class="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 text-slate-300 text-sm leading-relaxed mb-8">
-      <span class="text-xs text-purple-400 font-bold uppercase">Chapter 03</span>
-      <h3 class="font-heading text-xl font-bold text-white">TUMHARI ARTIST IDENTITY KYA HAI?</h3>
-      <p>Kisi aur ka sasta version banne ke bajaye apna original version bano. Identity waqt ke sath build hoti hai.</p>
-    </article>
-
-    <article class="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 text-slate-300 text-sm leading-relaxed mb-8">
-      <span class="text-xs text-emerald-400 font-bold uppercase">Chapter 04 & 05</span>
-      <h3 class="font-heading text-xl font-bold text-white">SONG IDEA AUR LYRICS</h3>
-      <p>Har song finished beat se nahi, chote idea se start hota hai. Lyrics mein kahani aur soul honi chahiye, sirf rhyming nahi.</p>
-    </article>
-
-    <footer class="text-center text-xs text-slate-600 pt-8 border-t border-slate-800">
-      ZERO SE ARTIST • Book 1 • By Tiger Soul
-    </footer>
-  </main>
-</body>
-</html>`
-
 export default function HomePage() {
-  const [books, setBooks] = useState<any[]>([staticBook])
+  const [books, setBooks] = useState<any[]>([])
   const [user, setUser] = useState<any>(null)
   const [showAuthModal, setShowAuthModal] = useState(false)
-  const [isReading, setIsReading] = useState(false)
+  const [readingFile, setReadingFile] = useState<string | null>(null)
+  const [readingTitle, setReadingTitle] = useState('')
+  const [htmlData, setHtmlData] = useState<string | null>(null)
   const [isSignUp, setIsSignUp] = useState(false)
   const [showEmailForm, setShowEmailForm] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [authError, setAuthError] = useState('')
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // 1. Session check
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (session?.user) {
@@ -110,6 +38,7 @@ export default function HomePage() {
     }
     checkUser()
 
+    // 2. Auth listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUser(session.user)
@@ -119,14 +48,27 @@ export default function HomePage() {
       }
     })
 
+    // 3. Database se books fetch karna
     async function fetchBooks() {
       try {
         const { data, error } = await supabase.from('books').select('*')
         if (!error && data && data.length > 0) {
           setBooks(data)
+        } else {
+          setBooks([
+            {
+              id: 'default-1',
+              title: 'ZERO SE ARTIST - Part 1',
+              author: 'Tiger Soul',
+              cover_path: 'https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/covers/1790700033242-teliy6.jpg',
+              file_path: 'https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/ebooks/1790700034105-biegrb.html',
+            }
+          ])
         }
       } catch (err) {
-        console.error('Fetch error:', err)
+        console.error(err)
+      } finally {
+        setLoading(false)
       }
     }
     fetchBooks()
@@ -165,19 +107,48 @@ export default function HomePage() {
   const handleLogout = async () => {
     await supabase.auth.signOut()
     setUser(null)
-    setIsReading(false)
+    closeReader()
   }
 
-  const handleReadBook = (_book: any) => {
+  // Universal Book Reader
+  const handleReadBook = async (book: any) => {
     if (!user) {
       setShowAuthModal(true)
       return
     }
-    setIsReading(true)
+
+    const rawFile = book.file_path || book.file_url || book.pdf_url
+    if (!rawFile) return
+
+    const fullUrl = rawFile.startsWith('http')
+      ? rawFile
+      : `https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/ebooks/${rawFile}`
+
+    setReadingTitle(book.title || 'Book Reader')
+
+    // Agar HTML file hai to fetch karke clean format mein render karega
+    if (fullUrl.endsWith('.html') || fullUrl.includes('.html')) {
+      try {
+        const res = await fetch(fullUrl)
+        const text = await res.text()
+        setHtmlData(text)
+        setReadingFile(fullUrl)
+      } catch {
+        window.open(fullUrl, '_blank')
+      }
+    } else {
+      // PDF file ke liye
+      window.open(fullUrl, '_blank')
+    }
   }
 
-  // Full Screen In-App Reader View
-  if (isReading) {
+  const closeReader = () => {
+    setReadingFile(null)
+    setHtmlData(null)
+  }
+
+  // Full Screen In-App Reader
+  if (readingFile && htmlData) {
     return (
       <div style={{ position: 'fixed', inset: 0, backgroundColor: '#0B0F17', zIndex: 9999, display: 'flex', flexDirection: 'column' }}>
         <header style={{
@@ -189,10 +160,10 @@ export default function HomePage() {
           borderBottom: '1px solid #1e293b'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fff', fontWeight: 'bold', fontSize: '15px' }}>
-            <span>📖</span> ZERO SE ARTIST - Part 1
+            <span>📖</span> {readingTitle}
           </div>
           <button
-            onClick={() => setIsReading(false)}
+            onClick={closeReader}
             style={{
               backgroundColor: '#dc2626',
               color: '#fff',
@@ -209,9 +180,9 @@ export default function HomePage() {
         </header>
 
         <iframe
-          srcDoc={bookHtmlRaw}
+          srcDoc={htmlData}
           style={{ width: '100%', flex: 1, border: 'none' }}
-          title="Zero Se Artist eBook"
+          title={readingTitle}
         />
       </div>
     )
@@ -244,7 +215,7 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* Hero Section */}
+      {/* Hero */}
       <section style={{ padding: '30px 20px 15px', maxWidth: '600px' }}>
         <h1 style={{ fontSize: '34px', fontWeight: '800', lineHeight: 1.2, margin: '0 0 10px' }}>
           Read More, <br />
@@ -255,49 +226,52 @@ export default function HomePage() {
         </p>
       </section>
 
-      {/* Books List */}
+      {/* Dynamic Books Grid */}
       <section style={{ padding: '10px 20px 60px' }}>
         <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px' }}>Featured Books</h2>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px' }}>
-          {books.map((book) => {
-            const rawCover = book.cover_path || book.cover_url || staticBook.cover_path
-            const cover = (rawCover && (rawCover.startsWith('http://') || rawCover.startsWith('https://')))
-              ? rawCover 
-              : `https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/covers/${rawCover}`
+        {loading ? (
+          <p style={{ color: '#64748b' }}>Books load ho rahi hain...</p>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px' }}>
+            {books.map((book) => {
+              const rawCover = book.cover_path || book.cover_url
+              const cover = rawCover && rawCover.startsWith('http')
+                ? rawCover
+                : `https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/covers/${rawCover || '1790700033242-teliy6.jpg'}`
 
-            return (
-              <div key={book.id || 'default-book'} style={{ background: '#111827', borderRadius: '14px', padding: '14px', border: '1px solid #1f2937' }}>
-                <div style={{
-                  height: '220px',
-                  borderRadius: '10px',
-                  backgroundColor: '#1e293b',
-                  backgroundImage: `url(${cover})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  marginBottom: '12px',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
-                }}>
+              return (
+                <div key={book.id || book.title} style={{ background: '#111827', borderRadius: '14px', padding: '14px', border: '1px solid #1f2937' }}>
+                  <div style={{
+                    height: '220px',
+                    borderRadius: '10px',
+                    backgroundColor: '#1e293b',
+                    backgroundImage: `url(${cover})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    marginBottom: '12px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
+                  }}></div>
+                  <h4 style={{ fontSize: '14px', margin: '0 0 4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {book.title}
+                  </h4>
+                  <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 12px' }}>
+                    {book.author || 'Tiger Soul'}
+                  </p>
+                  <button 
+                    onClick={() => handleReadBook(book)} 
+                    style={{ width: '100%', background: '#2563eb', color: '#fff', border: 'none', padding: '9px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}
+                  >
+                    📖 Read Book
+                  </button>
                 </div>
-                <h4 style={{ fontSize: '14px', margin: '0 0 4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {book.title}
-                </h4>
-                <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 12px' }}>
-                  {book.author || 'Tiger Soul'}
-                </p>
-                <button 
-                  onClick={() => handleReadBook(book)} 
-                  style={{ width: '100%', background: '#2563eb', color: '#fff', border: 'none', padding: '9px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}
-                >
-                  📖 Read Book
-                </button>
-              </div>
-            )
-          })}
-        </div>
+              )
+            })}
+          </div>
+        )}
       </section>
 
-      {/* Auth Modal Popup */}
+      {/* Auth Modal */}
       {showAuthModal && (
         <div style={{
           position: 'fixed',
@@ -427,5 +401,5 @@ export default function HomePage() {
       )}
     </div>
   )
-  }
-    
+    }
+      
