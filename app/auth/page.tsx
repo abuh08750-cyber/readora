@@ -16,13 +16,23 @@ export default function AuthPage() {
   const [message, setMessage] = useState('')
 
   useEffect(() => {
-    async function getUser() {
-      const { data: { session } } = await supabase.auth.getSession()
+    // 1. Initial session check
+    supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUserEmail(session.user.email ?? 'User')
       }
-    }
-    getUser()
+    })
+
+    // 2. OAuth redirect ke baad live session listen karna
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUserEmail(session.user.email ?? 'User')
+      } else {
+        setUserEmail(null)
+      }
+    })
+
+    return () => subscription.unsubscribe()
   }, [])
 
   const handleOAuthLogin = async (provider: 'google' | 'facebook') => {
@@ -74,7 +84,7 @@ export default function AuthPage() {
         position: 'relative'
       }}>
         
-        {/* Logo */}
+        {/* Readora Logo */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '16px' }}>
           <svg width="28" height="28" viewBox="0 0 24 24" fill="#0f172a">
             <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
@@ -84,7 +94,7 @@ export default function AuthPage() {
 
         {userEmail ? (
           <div>
-            <h3 style={{ color: '#0f172a', margin: '20px 0 10px' }}>Welcome!</h3>
+            <h3 style={{ color: '#0f172a', margin: '20px 0 10px' }}>Welcome Back!</h3>
             <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '20px' }}>{userEmail}</p>
             <button onClick={handleLogout} style={{
               width: '100%',
@@ -109,7 +119,7 @@ export default function AuthPage() {
             {/* Social Buttons */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               
-              {/* Google */}
+              {/* Google Button */}
               <button onClick={() => handleOAuthLogin('google')} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px',
                 padding: '12px', borderRadius: '14px', border: '1px solid #e2e8f0',
@@ -124,7 +134,7 @@ export default function AuthPage() {
                 Continue with Google
               </button>
 
-              {/* Facebook */}
+              {/* Facebook Button */}
               <button onClick={() => handleOAuthLogin('facebook')} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px',
                 padding: '12px', borderRadius: '14px', border: 'none',
@@ -150,7 +160,7 @@ export default function AuthPage() {
               </button>
 
               {/* Instagram Button */}
-              <button onClick={() => alert('Instagram Direct OAuth Supabase par available nahi hai, Facebook Login use karein!')} style={{
+              <button onClick={() => alert('Instagram Direct login Supabase par available nahi hai, Facebook Login use karein!')} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px',
                 padding: '12px', borderRadius: '14px', border: 'none',
                 background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
@@ -165,7 +175,7 @@ export default function AuthPage() {
               </button>
             </div>
 
-            {/* Email Form Toggle */}
+            {/* Email Form */}
             {showEmailForm && (
               <form onSubmit={handleEmailAuth} style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <input
@@ -217,5 +227,5 @@ export default function AuthPage() {
       </div>
     </div>
   )
-      }
-      
+            }
+          
