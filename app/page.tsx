@@ -63,8 +63,8 @@ export default function HomePage() {
           setBooks([
             {
               id: 'default-1',
-              title: 'ZERO SE ARTIST part 1',
-              author: 'TIGER SOUL',
+              title: 'ZERO SE ARTIST - Part 1',
+              author: 'Readora',
               category: 'Music',
               cover_path: 'https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/covers/1790700033242-teliy6.jpg',
               file_path: 'https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/ebooks/1790700034105-biegrb.html',
@@ -97,7 +97,7 @@ export default function HomePage() {
     if (isSignUp) {
       const { error } = await supabase.auth.signUp({ email, password })
       if (error) setAuthError(error.message)
-      else setAuthError('Confirmation link bhej diya gaya hai!')
+      else setAuthError('Confirmation email bhej diya gaya hai!')
     } else {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) setAuthError(error.message)
@@ -161,21 +161,26 @@ export default function HomePage() {
   }
 
   return (
-    <div style={{ backgroundColor: '#060911', color: '#f8fafc', minHeight: '100vh', width: '100%', overflowX: 'hidden', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div style={{ backgroundColor: '#040711', color: '#f8fafc', minHeight: '100vh', width: '100%', overflowX: 'hidden', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       
       {/* Header */}
-      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(6,9,17,0.95)', position: 'sticky', top: 0, zIndex: 50 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '20px', fontWeight: '800' }}>
-          <span>📖</span>
-          <span>Readora</span>
+      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 28px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#040711', position: 'sticky', top: 0, zIndex: 50 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '20px', fontWeight: '800' }}>
+            <span>📖</span>
+            <span>Readora</span>
+          </div>
+          <nav style={{ display: 'flex', gap: '20px', fontSize: '14px', fontWeight: '500' }}>
+            <span style={{ color: '#fff', borderBottom: '2px solid #3b82f6', paddingBottom: '4px', cursor: 'pointer' }}>Home</span>
+            <span style={{ color: '#94a3b8', cursor: 'pointer' }}>Library</span>
+            <span style={{ color: '#94a3b8', cursor: 'pointer' }}>Categories</span>
+          </nav>
         </div>
 
-        <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {user ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '13px', color: '#38bdf8', fontWeight: 'bold', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {user.email?.split('@')[0]}
-              </span>
+              <span style={{ fontSize: '13px', color: '#38bdf8', fontWeight: 'bold' }}>{user.email?.split('@')[0]}</span>
               <button onClick={handleLogout} style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>
                 Logout
               </button>
@@ -193,17 +198,20 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* Hero Section with exact warm lamp background */}
+      {/* Hero */}
       <section style={{
         position: 'relative',
-        padding: '52px 20px 40px',
-        backgroundImage: "linear-gradient(to right, #060911 25%, rgba(6, 9, 17, 0.7) 60%, rgba(6, 9, 17, 0.2) 100%), url('https://images.unsplash.com/photo-1507842229451-7f01be7ff6ab?w=1600&auto=format&fit=crop&q=80')",
+        minHeight: '400px',
+        display: 'flex',
+        alignItems: 'center',
+        background: "linear-gradient(to right, #040711 35%, rgba(4, 7, 17, 0.75) 65%, rgba(4, 7, 17, 0.25) 100%), url('https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=1600&auto=format&fit=crop&q=80')",
         backgroundSize: 'cover',
         backgroundPosition: 'right 30%',
+        padding: '40px 32px',
         borderBottom: '1px solid rgba(255,255,255,0.06)'
       }}>
         <div style={{ maxWidth: '540px' }}>
-          <h1 style={{ fontSize: '42px', fontWeight: '900', lineHeight: 1.15, margin: '0 0 14px', letterSpacing: '-0.5px' }}>
+          <h1 style={{ fontSize: '48px', fontWeight: '900', lineHeight: 1.1, margin: '0 0 14px', letterSpacing: '-1px' }}>
             Read More, <br />
             <span style={{ color: '#38bdf8', fontStyle: 'italic', fontFamily: 'serif' }}>Grow Further</span>
           </h1>
@@ -211,8 +219,8 @@ export default function HomePage() {
             Discover amazing books, explore new ideas, and build a better you — one page at a time.
           </p>
 
-          <div style={{ display: 'flex', alignItems: 'center', background: '#ffffff', borderRadius: '40px', padding: '5px 7px 5px 16px', maxWidth: '420px', boxShadow: '0 10px 30px rgba(0,0,0,0.6)' }}>
-            <span style={{ color: '#94a3b8', marginRight: '8px' }}>🔍</span>
+          <div style={{ display: 'flex', alignItems: 'center', background: '#ffffff', borderRadius: '40px', padding: '4px 6px 4px 16px', maxWidth: '420px' }}>
+            <span style={{ color: '#94a3b8', marginRight: '6px' }}>🔍</span>
             <input
               type="text"
               placeholder="Search books, authors..."
@@ -220,12 +228,12 @@ export default function HomePage() {
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{ border: 'none', outline: 'none', flex: 1, fontSize: '13px', color: '#1e293b' }}
             />
-            <button style={{ background: '#2563eb', border: 'none', width: '36px', height: '36px', borderRadius: '50%', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '13px' }}>
+            <button style={{ background: '#2563eb', border: 'none', width: '34px', height: '34px', borderRadius: '50%', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '13px' }}>
               ➔
             </button>
           </div>
 
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', marginTop: '22px', fontSize: '12px', color: '#cbd5e1', fontWeight: '500' }}>
+          <div style={{ display: 'flex', gap: '22px', marginTop: '22px', fontSize: '12px', color: '#cbd5e1', fontWeight: '500' }}>
             <span>📖 Free to Read</span>
             <span>⚡ Easy Access</span>
             <span>🛡️ Safe & Secure</span>
@@ -234,7 +242,7 @@ export default function HomePage() {
       </section>
 
       {/* Featured Books */}
-      <section style={{ padding: '34px 20px 24px', maxWidth: '1200px', margin: '0 auto' }}>
+      <section style={{ padding: '36px 32px 20px', maxWidth: '1400px', margin: '0 auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '18px' }}>
           <div>
             <h2 style={{ fontSize: '20px', fontWeight: '800', margin: '0 0 4px' }}>Featured Books</h2>
@@ -254,9 +262,9 @@ export default function HomePage() {
                 : `https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/covers/${rawCover || '1790700033242-teliy6.jpg'}`
 
               return (
-                <div key={book.id || book.title} style={{ background: '#0e1626', borderRadius: '16px', padding: '14px', border: '1px solid #1a2538', display: 'flex', flexDirection: 'column' }}>
+                <div key={book.id || book.title} style={{ background: '#0a0f1d', borderRadius: '16px', padding: '12px', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column' }}>
                   <div style={{
-                    height: '240px',
+                    height: '230px',
                     borderRadius: '10px',
                     backgroundColor: '#151d30',
                     backgroundImage: `url(${cover})`,
@@ -273,12 +281,12 @@ export default function HomePage() {
                   </p>
 
                   <div style={{ marginTop: 'auto' }}>
-                    <span style={{ display: 'inline-block', background: 'rgba(56,189,248,0.12)', color: '#38bdf8', fontSize: '10px', fontWeight: 'bold', padding: '3px 8px', borderRadius: '6px', marginBottom: '10px' }}>
+                    <span style={{ display: 'inline-block', background: 'rgba(56,189,248,0.12)', color: '#38bdf8', fontSize: '10px', fontWeight: 'bold', padding: '3px 8px', borderRadius: '6px', marginBottom: '8px' }}>
                       {book.category || 'Music'}
                     </span>
                     <button
                       onClick={() => handleRead(book)}
-                      style={{ width: '100%', background: '#2563eb', color: '#fff', border: 'none', padding: '9px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}
+                      style={{ width: '100%', background: '#2563eb', color: '#fff', border: 'none', padding: '8px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}
                     >
                       📖 Read Book
                     </button>
@@ -291,7 +299,7 @@ export default function HomePage() {
       </section>
 
       {/* Categories */}
-      <section style={{ padding: '16px 20px 60px', maxWidth: '1200px', margin: '0 auto' }}>
+      <section style={{ padding: '20px 32px 60px', maxWidth: '1400px', margin: '0 auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '16px' }}>
           <div>
             <h2 style={{ fontSize: '18px', fontWeight: '800', margin: '0 0 4px' }}>Browse by Category</h2>
@@ -300,9 +308,9 @@ export default function HomePage() {
           <span style={{ color: '#38bdf8', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>View All ➔</span>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '8px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '12px' }}>
           {categories.map((cat) => (
-            <div key={cat.name} style={{ background: '#0e1626', border: '1px solid #1a2538', borderRadius: '24px', padding: '10px 16px', whiteSpace: 'nowrap', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: '600' }}>
+            <div key={cat.name} style={{ background: '#0a0f1d', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '14px 10px', textAlign: 'center', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '12px', fontWeight: '600' }}>
               <span>{cat.icon}</span>
               <span>{cat.name}</span>
             </div>
@@ -355,4 +363,4 @@ export default function HomePage() {
     </div>
   )
     }
-    
+         
