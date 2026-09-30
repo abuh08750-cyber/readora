@@ -14,7 +14,6 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   },
 })
 
-// Categories matching reference design
 const categoriesList = [
   { name: 'Music', icon: '🎵', color: '#818cf8' },
   { name: 'Self Help', icon: '👤', color: '#34d399' },
@@ -147,7 +146,6 @@ export default function HomePage() {
     b.author?.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  // In-App Fullscreen Reader View
   if (readingFile && htmlData) {
     return (
       <div style={{ position: 'fixed', inset: 0, backgroundColor: '#0B0F17', zIndex: 9999, display: 'flex', flexDirection: 'column' }}>
@@ -165,7 +163,7 @@ export default function HomePage() {
   return (
     <div style={{ backgroundColor: '#040711', color: '#f8fafc', minHeight: '100vh', width: '100%', overflowX: 'hidden', fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
       
-      {/* 1. Exact Navbar */}
+      {/* 1. Header Navigation */}
       <header style={{
         display: 'flex',
         alignItems: 'center',
@@ -179,7 +177,6 @@ export default function HomePage() {
         boxSizing: 'border-box'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '40px' }}>
-          {/* Logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '21px', fontWeight: '800', letterSpacing: '-0.3px', cursor: 'pointer' }}>
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
@@ -188,7 +185,6 @@ export default function HomePage() {
             <span>Readora</span>
           </div>
 
-          {/* Navigation Links */}
           <nav style={{ display: 'flex', gap: '26px', fontSize: '14px', fontWeight: '500' }}>
             <span style={{ color: '#ffffff', cursor: 'pointer', borderBottom: '2px solid #3b82f6', paddingBottom: '6px' }}>Home</span>
             <span style={{ color: '#94a3b8', cursor: 'pointer', paddingBottom: '6px' }}>Library</span>
@@ -196,7 +192,6 @@ export default function HomePage() {
           </nav>
         </div>
 
-        {/* Right Search + Auth */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
             <input
@@ -238,16 +233,13 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* 2. Hero Section with Real Lamp & Books Cover */}
+      {/* 2. Hero Section */}
       <section style={{
         position: 'relative',
         minHeight: '430px',
         display: 'flex',
         alignItems: 'center',
-        background: `
-          linear-gradient(to right, #040711 38%, rgba(4, 7, 17, 0.75) 60%, rgba(4, 7, 17, 0.2) 100%),
-          url('https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=1600&auto=format&fit=crop&q=80')
-        `,
+        backgroundImage: "linear-gradient(to right, #040711 38%, rgba(4, 7, 17, 0.75) 60%, rgba(4, 7, 17, 0.2) 100%), url('https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=1600&auto=format&fit=crop&q=80')",
         backgroundSize: 'cover',
         backgroundPosition: 'right 30%',
         padding: '40px 48px',
@@ -269,7 +261,6 @@ export default function HomePage() {
             Discover amazing books, explore new ideas, and build a better you — one page at a time.
           </p>
 
-          {/* White Pill Search Box */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -305,7 +296,6 @@ export default function HomePage() {
             </button>
           </div>
 
-          {/* 3 Badges */}
           <div style={{ display: 'flex', gap: '28px', marginTop: '28px', fontSize: '12px', color: '#cbd5e1', fontWeight: '500' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>📖 Free to Read</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>⚡ Easy Access</span>
@@ -428,7 +418,6 @@ export default function HomePage() {
               gap: '10px',
               fontSize: '13px',
               fontWeight: '600',
-              transition: 'transform 0.2s',
               boxShadow: '0 4px 14px rgba(0,0,0,0.3)'
             }}>
               <span style={{ color: cat.color }}>{cat.icon}</span>
@@ -451,4 +440,7 @@ export default function HomePage() {
               <button onClick={() => handleOAuthLogin('google')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '11px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', color: '#0f172a', fontWeight: '600', fontSize: '14px', cursor: 'pointer' }}>
                 Continue with Google
               </button>
-              <button onClick={() => handleOAuthLogin('facebook')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '11px', borderRadius: '12px
+              <button onClick={() => handleOAuthLogin('facebook')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '11px', borderRadius: '12px', border: 'none', background: '#1877F2', color: '#fff', fontWeight: '600', fontSize: '14px', cursor: 'pointer' }}>
+                Continue with Facebook
+              </button>
+              <button onClick={() => setShowEmailForm(!showEmailForm)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 
