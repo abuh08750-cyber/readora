@@ -3,45 +3,45 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  'https://stuabcdisgmmxprapfai.supabase.co',
-  'Sb_publishable_AHK5jGqipB4wYQCAtkaYSQ_hwuTecjR',
+const SUPABASE_URL = 'https://stuabcdisgmmxprapfai.supabase.co'
+const SUPABASE_KEY = 'Sb_publishable_AHK5jGqipB4wYQCAtkaYSQ_hwuTecjR'
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  },
+})
+
+// आपकी अपलोड की हुई असली किताब को डिफ़ॉल्ट डेटा के तौर पर सेट किया गया है
+const defaultBooks = [
   {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-    },
-  }
-)
+    id: 'dfb9528e-8466-4c5f-aeab-0329ae420bf1',
+    title: 'ZERO SE ARTIST - Part 1',
+    author: 'Readora',
+    category: 'Music',
+    cover_url: '', // अगर कवर इमेज का कोई सीधा लिंक हो तो यहाँ उद्धरणों में डाल सकते हैं
+    file_url: '',
+  },
+]
 
 export default function HomePage() {
-  const [books, setBooks] = useState<any[]>([])
+  const [books, setBooks] = useState<any[]>(defaultBooks)
   const [user, setUser] = useState<any>(null)
   const [showAuthModal, setShowAuthModal] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const [isSignUp, setIsSignUp] = useState(false)
+  const [showEmailForm, setShowEmailForm] = useState(false)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [authError, setAuthError] = useState('')
 
   useEffect(() => {
-    async function loadData() {
-      // 1. Session चेक करें
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session?.user) {
-        setUser(session.user)
-      }
+    // 1. Session चेक करें
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) setUser(session.user)
+    })
 
-      // 2. Supabase से सीधे किताबें लाएँ (बिना किसी गलत sorting के)
-      const { data, error } = await supabase.from('books').select('*')
-      if (error) {
-        console.error('Books fetch error:', error)
-      } else if (data) {
-        setBooks(data)
-      }
-      setLoading(false)
-    }
-
-    loadData()
-
-    // Login/Logout इवेंट सुनें
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUser(session.user)
@@ -51,16 +51,48 @@ export default function HomePage() {
       }
     })
 
+    // 2. Supabase डेटाबेस से किताबें लोड करें
+    async function fetchBooks() {
+      try {
+        const { data, error } = await supabase.from('books').select('*')
+        if (!error && data && data.length > 0) {
+          setBooks(data)
+        }
+      } catch (err) {
+        console.error('Error fetching books:', err)
+      }
+    }
+    fetchBooks()
+
     return () => subscription.unsubscribe()
   }, [])
 
-  const handleGoogleLogin = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
+  const handleOAuthLogin = async (provider: 'google' | 'facebook') => {
+    setAuthError('')
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
       options: {
-        redirectTo: typeof window !== 'undefined' ? window.location.origin : 'https://readora-a4-be07.vercel.app'
-      }
+        redirectTo: typeof window !== 'undefined' ? window.location.origin : 'https://readora-a4-be07.vercel.app',
+      },
     })
+    if (error) setAuthError(error.message)
+  }
+
+  const handleEmailAuth = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setAuthError('')
+    if (isSignUp) {
+      const { error } = await supabase.auth.signUp({ email, password })
+      if (error) setAuthError(error.message)
+      else setAuthError('Confirmation link email par bhej diya gaya hai!')
+    } else {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) setAuthError(error.message)
+      else if (data?.user) {
+        setUser(data.user)
+        setShowAuthModal(false)
+      }
+    }
   }
 
   const handleLogout = async () => {
@@ -74,12 +106,11 @@ export default function HomePage() {
       return
     }
 
-    // अगर PDF या File URL मौजूद है तो खोलें, नहीं तो /book/[id] पर जाएँ
-    const fileUrl = book.file_url || book.pdf_url || book.url || book.file_path
+    const fileUrl = book.file_url || book.pdf_url || book.url
     if (fileUrl) {
       window.open(fileUrl, '_blank')
     } else {
-      window.location.href = `/book/${book.id}`
+      alert(`Opening ${book.title}... (PDF link add karne ke liye Supabase me file_url update karein)`)
     }
   }
 
@@ -92,115 +123,234 @@ export default function HomePage() {
           <span>📖</span> Readora
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div>
           {user ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <span style={{ fontSize: '13px', color: '#38bdf8' }}>{user.email?.split('@')[0]}</span>
-              <button onClick={handleLogout} style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
+              <button onClick={handleLogout} style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>
                 Logout
               </button>
             </div>
           ) : (
-            <button onClick={() => setShowAuthModal(true)} style={{ background: '#2563eb', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>
+            <button onClick={() => setShowAuthModal(true)} style={{ background: '#2563eb', color: '#ffffff', border: 'none', padding: '8px 18px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>
               Sign In
             </button>
           )}
         </div>
       </header>
 
-      {/* Hero Banner */}
+      {/* Hero Section */}
       <section style={{ padding: '36px 24px 20px', maxWidth: '600px' }}>
         <h1 style={{ fontSize: '36px', fontWeight: '800', lineHeight: 1.2, margin: '0 0 10px' }}>
           Read More, <br />
           <span style={{ color: '#38bdf8' }}>Grow Further</span>
         </h1>
-        <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '20px' }}>
+        <p style={{ color: '#94a3b8', fontSize: '14px', margin: '0 0 24px' }}>
           Discover amazing books, explore new ideas, and build a better you.
         </p>
       </section>
 
-      {/* Books Section */}
+      {/* Books List */}
       <section style={{ padding: '10px 24px 60px' }}>
-        <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px' }}>Your Books</h2>
+        <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px' }}>Featured Books</h2>
 
-        {loading ? (
-          <p style={{ color: '#64748b' }}>किताबें लोड हो रही हैं...</p>
-        ) : books.length === 0 ? (
-          <p style={{ color: '#94a3b8' }}>कोई किताब नहीं मिली।</p>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px' }}>
-            {books.map((book) => {
-              // जो भी इमेज फ़ील्ड मिले उसे कवर बनाएँ
-              const cover = book.cover_url || book.cover_image || book.image_url || book.thumbnail
-              return (
-                <div key={book.id} style={{ background: '#111827', borderRadius: '12px', padding: '12px', border: '1px solid #1f2937' }}>
-                  <div style={{
-                    height: '190px',
-                    borderRadius: '8px',
-                    backgroundColor: '#1e293b',
-                    backgroundImage: cover ? `url(${cover})` : 'none',
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginBottom: '10px'
-                  }}>
-                    {!cover && <span style={{ fontSize: '32px' }}>📚</span>}
-                  </div>
-                  <h4 style={{ fontSize: '14px', margin: '0 0 4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {book.title}
-                  </h4>
-                  <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 10px' }}>
-                    {book.author || 'Readora'}
-                  </p>
-                  <button 
-                    onClick={() => handleReadBook(book)} 
-                    style={{ width: '100%', background: '#2563eb', color: '#fff', border: 'none', padding: '8px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}
-                  >
-                    📖 Read Book
-                  </button>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '16px' }}>
+          {books.map((book) => {
+            const cover = book.cover_url || book.cover_image || book.image_url
+            return (
+              <div key={book.id} style={{ background: '#111827', borderRadius: '14px', padding: '14px', border: '1px solid #1f2937' }}>
+                <div style={{
+                  height: '200px',
+                  borderRadius: '10px',
+                  backgroundColor: '#1e293b',
+                  backgroundImage: cover ? `url(${cover})` : 'linear-gradient(135deg, #1e3a8a, #0f172a)',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '12px',
+                  textAlign: 'center',
+                  marginBottom: '12px'
+                }}>
+                  {!cover && (
+                    <>
+                      <span style={{ fontSize: '32px', marginBottom: '8px' }}>🎧</span>
+                      <span style={{ fontWeight: 'bold', fontSize: '13px', color: '#fff' }}>{book.title}</span>
+                    </>
+                  )}
                 </div>
-              )
-            })}
-          </div>
-        )}
+                <h4 style={{ fontSize: '14px', margin: '0 0 4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {book.title}
+                </h4>
+                <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 12px' }}>
+                  {book.author || 'Readora'}
+                </p>
+                <button 
+                  onClick={() => handleReadBook(book)} 
+                  style={{ width: '100%', background: '#2563eb', color: '#fff', border: 'none', padding: '9px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}
+                >
+                  📖 Read Book
+                </button>
+              </div>
+            )
+          })}
+        </div>
       </section>
 
-      {/* Login Popup Modal */}
+      {/* Complete Auth Popup Modal */}
       {showAuthModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-          <div style={{ background: '#ffffff', borderRadius: '20px', padding: '30px 24px', width: '100%', maxWidth: '360px', textAlign: 'center', position: 'relative', color: '#0f172a' }}>
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.75)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '24px',
+            padding: '34px 28px',
+            width: '100%',
+            maxWidth: '380px',
+            textAlign: 'center',
+            position: 'relative',
+            color: '#0f172a',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.4)'
+          }}>
+            {/* Close Button */}
             <button 
               onClick={() => setShowAuthModal(false)}
-              style={{ position: 'absolute', top: '14px', right: '16px', background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}
+              style={{ position: 'absolute', top: '16px', right: '18px', background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#64748b' }}
             >
               ✕
             </button>
 
-            <h3 style={{ fontSize: '20px', fontWeight: 'bold', margin: '0 0 8px' }}>Welcome Back!</h3>
-            <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 20px' }}>किताब पढ़ने के लिए कृपया लॉगिन करें</p>
+            {/* Readora Logo */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '12px' }}>
+              <span style={{ fontSize: '24px' }}>📖</span>
+              <span style={{ fontSize: '22px', fontWeight: '800' }}>Readora</span>
+            </div>
 
-            <button onClick={handleGoogleLogin} style={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '10px',
-              padding: '12px',
-              borderRadius: '10px',
-              border: '1px solid #cbd5e1',
-              background: '#ffffff',
-              color: '#0f172a',
-              fontWeight: 'bold',
-              cursor: 'pointer'
-            }}>
-              Continue with Google
-            </button>
+            <h3 style={{ fontSize: '20px', fontWeight: '700', margin: '0 0 6px' }}>
+              {isSignUp ? 'Create an Account' : 'Welcome Back!'}
+            </h3>
+            <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 20px' }}>
+              Sign in to read this book and access your library.
+            </p>
+
+            {/* Login Buttons */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              
+              {/* Google */}
+              <button onClick={() => handleOAuthLogin('google')} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                padding: '11px', borderRadius: '12px', border: '1px solid #e2e8f0',
+                background: '#ffffff', color: '#0f172a', fontWeight: '600', fontSize: '14px', cursor: 'pointer'
+              }}>
+                <svg width="18" height="18" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+                  <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
+                  <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.17 0 9.97 0 12s.45 3.83 1.25 5.42l4.03-3.15z"/>
+                  <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+                </svg>
+                Continue with Google
+              </button>
+
+              {/* Facebook */}
+              <button onClick={() => handleOAuthLogin('facebook')} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                padding: '11px', borderRadius: '12px', border: 'none',
+                background: '#1877F2', color: '#ffffff', fontWeight: '600', fontSize: '14px', cursor: 'pointer'
+              }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="#ffffff">
+                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                </svg>
+                Continue with Facebook
+              </button>
+
+              {/* Email */}
+              <button onClick={() => setShowEmailForm(!showEmailForm)} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                padding: '11px', borderRadius: '12px', border: '1px solid #e2e8f0',
+                background: '#ffffff', color: '#0f172a', fontWeight: '600', fontSize: '14px', cursor: 'pointer'
+              }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0f172a" strokeWidth="2">
+                  <rect width="20" height="16" x="2" y="4" rx="2"/>
+                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                </svg>
+                Continue with Email
+              </button>
+
+              {/* Instagram */}
+              <button onClick={() => alert('Instagram login ke liye Facebook login use karein!')} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                padding: '11px', borderRadius: '12px', border: 'none',
+                background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
+                color: '#ffffff', fontWeight: '600', fontSize: '14px', cursor: 'pointer'
+              }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2">
+                  <rect width="20" height="20" x="2" y="2" rx="5" ry="5"/>
+                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+                  <line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/>
+                </svg>
+                Continue with Instagram
+              </button>
+            </div>
+
+            {/* Email Form Toggle */}
+            {showEmailForm && (
+              <form onSubmit={handleEmailAuth} style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <input
+                  type="email"
+                  placeholder="Enter email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  style={{ padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none' }}
+                />
+                <input
+                  type="password"
+                  placeholder="Enter password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  style={{ padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none' }}
+                />
+                <button type="submit" style={{
+                  padding: '10px', borderRadius: '8px', border: 'none',
+                  background: '#0f172a', color: '#fff', fontWeight: '600', cursor: 'pointer', fontSize: '13px'
+                }}>
+                  {isSignUp ? 'Sign Up with Email' : 'Sign In with Email'}
+                </button>
+              </form>
+            )}
+
+            {authError && <p style={{ fontSize: '12px', color: '#ef4444', marginTop: '10px' }}>{authError}</p>}
+
+            <div style={{ display: 'flex', alignItems: 'center', margin: '18px 0 14px' }}>
+              <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }}></div>
+              <span style={{ padding: '0 8px', fontSize: '12px', color: '#94a3b8' }}>or</span>
+              <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }}></div>
+            </div>
+
+            <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
+              {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
+              <span
+                onClick={() => { setIsSignUp(!isSignUp); setShowEmailForm(true); }}
+                style={{ color: '#2563eb', fontWeight: '600', cursor: 'pointer' }}
+              >
+                {isSignUp ? 'Sign In' : 'Sign Up'}
+              </span>
+            </p>
           </div>
         </div>
       )}
     </div>
   )
-        }
+    }
         
