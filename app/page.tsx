@@ -166,14 +166,14 @@ export default function HomePage() {
       {/* Header */}
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 28px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#040711', position: 'sticky', top: 0, zIndex: 50 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '20px', fontWeight: '800' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '20px', fontWeight: '800', cursor: 'pointer' }} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
             <span>📖</span>
             <span>Readora</span>
           </div>
           <nav style={{ display: 'flex', gap: '20px', fontSize: '14px', fontWeight: '500' }}>
-            <span style={{ color: '#fff', borderBottom: '2px solid #3b82f6', paddingBottom: '4px', cursor: 'pointer' }}>Home</span>
-            <span style={{ color: '#94a3b8', cursor: 'pointer' }}>Library</span>
-            <span style={{ color: '#94a3b8', cursor: 'pointer' }}>Categories</span>
+            <span style={{ color: '#fff', borderBottom: '2px solid #3b82f6', paddingBottom: '4px', cursor: 'pointer' }} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>Home</span>
+            <span style={{ color: '#94a3b8', cursor: 'pointer' }} onClick={() => window.location.href = '/library'}>Library</span>
+            <span style={{ color: '#94a3b8', cursor: 'pointer' }} onClick={() => document.getElementById('categories-section')?.scrollIntoView({ behavior: 'smooth' })}>Categories</span>
           </nav>
         </div>
 
@@ -248,7 +248,7 @@ export default function HomePage() {
             <h2 style={{ fontSize: '20px', fontWeight: '800', margin: '0 0 4px' }}>Featured Books</h2>
             <p style={{ color: '#64748b', fontSize: '12px', margin: 0 }}>Handpicked books just for you</p>
           </div>
-          <span style={{ color: '#38bdf8', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>View All ➔</span>
+          <span style={{ color: '#38bdf8', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }} onClick={() => window.location.href = '/library'}>View All ➔</span>
         </div>
 
         {loading ? (
@@ -299,18 +299,18 @@ export default function HomePage() {
       </section>
 
       {/* Categories */}
-      <section style={{ padding: '20px 32px 60px', maxWidth: '1400px', margin: '0 auto' }}>
+      <section id="categories-section" style={{ padding: '20px 32px 60px', maxWidth: '1400px', margin: '0 auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '16px' }}>
           <div>
             <h2 style={{ fontSize: '18px', fontWeight: '800', margin: '0 0 4px' }}>Browse by Category</h2>
             <p style={{ color: '#64748b', fontSize: '12px', margin: 0 }}>Find books in your favorite category</p>
           </div>
-          <span style={{ color: '#38bdf8', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>View All ➔</span>
+          <span style={{ color: '#38bdf8', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }} onClick={() => window.location.href = '/library'}>View All ➔</span>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '12px' }}>
           {categories.map((cat) => (
-            <div key={cat.name} style={{ background: '#0a0f1d', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '14px 10px', textAlign: 'center', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '12px', fontWeight: '600' }}>
+            <div key={cat.name} onClick={() => window.location.href = '/library'} style={{ background: '#0a0f1d', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '14px 10px', textAlign: 'center', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '12px', fontWeight: '600' }}>
               <span>{cat.icon}</span>
               <span>{cat.name}</span>
             </div>
@@ -362,5 +362,5 @@ export default function HomePage() {
       )}
     </div>
   )
-    }
-         
+}
+  
