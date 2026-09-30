@@ -14,8 +14,17 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   },
 })
 
+// Aapki book ka direct aur confirmed data
+const staticBook = {
+  id: 'dfb9528e-8466-4c5f-aeab-0329ae420bf1',
+  title: 'ZERO SE ARTIST - Part 1',
+  author: 'Readora',
+  cover_path: 'https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/covers/1790700033242-teliy6.jpg',
+  file_path: 'https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/ebooks/1790700033242-teliy6.pdf',
+}
+
 export default function HomePage() {
-  const [books, setBooks] = useState<any[]>([])
+  const [books, setBooks] = useState<any[]>([staticBook])
   const [user, setUser] = useState<any>(null)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [isSignUp, setIsSignUp] = useState(false)
@@ -23,39 +32,18 @@ export default function HomePage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [authError, setAuthError] = useState('')
-  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // 1. URL Hash (#access_token=...) ko instantly parse karein
-    if (typeof window !== 'undefined' && window.location.hash.includes('access_token')) {
-      const hash = window.location.hash.substring(1)
-      const params = new URLSearchParams(hash)
-      const accessToken = params.get('access_token')
-      const refreshToken = params.get('refresh_token')
-
-      if (accessToken) {
-        supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken || '',
-        }).then(({ data, error }) => {
-          if (data?.session?.user) {
-            setUser(data.session.user)
-            setShowAuthModal(false)
-          }
-          // URL ko clean kar dein
-          window.history.replaceState(null, '', window.location.pathname)
-        })
-      }
-    }
-
-    // 2. Existing Session Check
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Session check
+    const checkUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
       if (session?.user) {
         setUser(session.user)
       }
-    })
+    }
+    checkUser()
 
-    // 3. Auth Listener (Login / Logout real-time catch karega)
+    // Auth change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUser(session.user)
@@ -65,17 +53,11 @@ export default function HomePage() {
       }
     })
 
-    // 4. Books Fetch
+    // Supabase se books lana (agar DB slow ho toh bhi staticBook hamesha rahegi)
     async function fetchBooks() {
-      try {
-        const { data, error } = await supabase.from('books').select('*')
-        if (!error && data && data.length > 0) {
-          setBooks(data)
-        }
-      } catch (err) {
-        console.error('Fetch error:', err)
-      } finally {
-        setLoading(false)
+      const { data } = await supabase.from('books').select('*')
+      if (data && data.length > 0) {
+        setBooks(data)
       }
     }
     fetchBooks()
@@ -100,7 +82,7 @@ export default function HomePage() {
     if (isSignUp) {
       const { error } = await supabase.auth.signUp({ email, password })
       if (error) setAuthError(error.message)
-      else setAuthError('Confirmation link email par bhej diya gaya hai!')
+      else setAuthError('Confirmation email bhej diya gaya hai!')
     } else {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) setAuthError(error.message)
@@ -124,12 +106,9 @@ export default function HomePage() {
 
     const file = book.file_path || book.file_url || book.pdf_url
     if (file) {
-      const url = file.startsWith('http') 
-        ? file 
-        : `https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/ebooks/${file}`
-      window.open(url, '_blank')
+      window.open(file, '_blank')
     } else {
-      alert(`Kitab open ho rahi hai: ${book.title}`)
+      alert(`Book open ho rahi hai: ${book.title}`)
     }
   }
 
@@ -175,42 +154,38 @@ export default function HomePage() {
       <section style={{ padding: '10px 20px 60px' }}>
         <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px' }}>Featured Books</h2>
 
-        {loading ? (
-          <p style={{ color: '#64748b' }}>Loading books...</p>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px' }}>
-            {books.map((book) => {
-              const cover = book.cover_path || book.cover_url || book.cover_image
-              return (
-                <div key={book.id} style={{ background: '#111827', borderRadius: '14px', padding: '14px', border: '1px solid #1f2937' }}>
-                  <div style={{
-                    height: '220px',
-                    borderRadius: '10px',
-                    backgroundColor: '#1e293b',
-                    backgroundImage: cover ? `url(${cover})` : 'none',
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    marginBottom: '12px',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
-                  }}>
-                  </div>
-                  <h4 style={{ fontSize: '14px', margin: '0 0 4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {book.title}
-                  </h4>
-                  <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 12px' }}>
-                    {book.author || 'Readora'}
-                  </p>
-                  <button 
-                    onClick={() => handleReadBook(book)} 
-                    style={{ width: '100%', background: '#2563eb', color: '#fff', border: 'none', padding: '9px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}
-                  >
-                    📖 Read Book
-                  </button>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px' }}>
+          {books.map((book) => {
+            const cover = book.cover_path || book.cover_url || staticBook.cover_path
+            return (
+              <div key={book.id || 'default-book'} style={{ background: '#111827', borderRadius: '14px', padding: '14px', border: '1px solid #1f2937' }}>
+                <div style={{
+                  height: '220px',
+                  borderRadius: '10px',
+                  backgroundColor: '#1e293b',
+                  backgroundImage: `url(${cover})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  marginBottom: '12px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
+                }}>
                 </div>
-              )
-            })}
-          </div>
-        )}
+                <h4 style={{ fontSize: '14px', margin: '0 0 4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {book.title}
+                </h4>
+                <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 12px' }}>
+                  {book.author || 'Readora'}
+                </p>
+                <button 
+                  onClick={() => handleReadBook(book)} 
+                  style={{ width: '100%', background: '#2563eb', color: '#fff', border: 'none', padding: '9px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}
+                >
+                  📖 Read Book
+                </button>
+              </div>
+            )
+          })}
+        </div>
       </section>
 
       {/* Auth Modal Popup */}
@@ -343,5 +318,5 @@ export default function HomePage() {
       )}
     </div>
   )
-        }
-        
+    }
+      
