@@ -163,42 +163,42 @@ export default function HomePage() {
   }
 
   return (
-    <div style={{ backgroundColor: '#070b13', color: '#f8fafc', minHeight: '100vh', width: '100%', overflowX: 'hidden', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+    <div style={{ backgroundColor: '#060911', color: '#f8fafc', minHeight: '100vh', width: '100%', overflowX: 'hidden', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
       
-      {/* Top Bar */}
+      {/* 1. Header */}
       <header style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '12px 16px',
-        borderBottom: '1px solid #151e2e',
-        background: 'rgba(7,11,19,0.95)',
-        backdropFilter: 'blur(8px)',
+        padding: '14px 20px',
+        borderBottom: '1px solid rgba(255,255,255,0.08)',
+        background: 'rgba(6,9,17,0.92)',
+        backdropFilter: 'blur(12px)',
         position: 'sticky',
         top: 0,
         zIndex: 50,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '19px', fontWeight: '800' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '20px', fontWeight: '800' }}>
           <span>📖</span>
           <span>Readora</span>
         </div>
 
         <div>
           {user ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '12px', color: '#38bdf8', fontWeight: '600', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '13px', color: '#38bdf8', fontWeight: '600', maxWidth: '110px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {user.email?.split('@')[0]}
               </span>
-              <button onClick={handleLogout} style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>
+              <button onClick={handleLogout} style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>
                 Logout
               </button>
             </div>
           ) : (
-            <div style={{ display: 'flex', gap: '6px' }}>
-              <button onClick={() => setShowAuthModal(true)} style={{ background: '#111827', color: '#fff', border: '1px solid #1f2937', padding: '5px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '600' }}>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={() => setShowAuthModal(true)} style={{ background: '#111827', color: '#fff', border: '1px solid #1f2937', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
                 Sign In
               </button>
-              <button onClick={() => setShowAuthModal(true)} style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '600' }}>
+              <button onClick={() => setShowAuthModal(true)} style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
                 Get Started
               </button>
             </div>
@@ -206,60 +206,62 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* Hero with Visual Lamp Overlay */}
+      {/* 2. Hero Section with Real Background Depth */}
       <section style={{
         position: 'relative',
-        padding: '44px 18px 36px',
-        background: 'radial-gradient(circle at top right, rgba(56, 189, 248, 0.12), transparent 70%), #070b13',
-        borderBottom: '1px solid #151e2e'
+        padding: '50px 20px 45px',
+        backgroundImage: `linear-gradient(to right, rgba(6,9,17,0.95) 0%, rgba(6,9,17,0.8) 50%, rgba(6,9,17,0.88) 100%), url('https://images.unsplash.com/photo-1507842229451-7f01be7ff6ab?w=1600&auto=format&fit=crop&q=80')`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center right',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
       }}>
-        <div style={{ maxWidth: '540px' }}>
-          <h1 style={{ fontSize: '36px', fontWeight: '900', lineHeight: 1.15, margin: '0 0 10px', letterSpacing: '-0.5px' }}>
+        <div style={{ maxWidth: '580px', margin: '0 auto' }}>
+          <h1 style={{ fontSize: '42px', fontWeight: '900', lineHeight: 1.12, margin: '0 0 12px', letterSpacing: '-0.8px' }}>
             Read More, <br />
             <span style={{ color: '#38bdf8', fontStyle: 'italic' }}>Grow Further</span>
           </h1>
-          <p style={{ color: '#94a3b8', fontSize: '13px', lineHeight: 1.5, margin: '0 0 20px' }}>
+          <p style={{ color: '#cbd5e1', fontSize: '14px', lineHeight: 1.5, margin: '0 0 24px', opacity: 0.9 }}>
             Discover amazing books, explore new ideas, and build a better you — one page at a time.
           </p>
 
           {/* Search Box */}
-          <div style={{ display: 'flex', alignItems: 'center', background: '#ffffff', borderRadius: '30px', padding: '4px 6px 4px 14px', maxWidth: '100%', boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', background: '#ffffff', borderRadius: '32px', padding: '5px 7px 5px 16px', maxWidth: '100%', boxShadow: '0 10px 30px rgba(0,0,0,0.6)' }}>
             <span style={{ color: '#94a3b8', marginRight: '6px', fontSize: '14px' }}>🔍</span>
             <input
               type="text"
-              placeholder="Search books, authors..."
+              placeholder="Search for books, authors, or categories..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ border: 'none', outline: 'none', flex: 1, fontSize: '13px', color: '#1e293b', minWidth: '0' }}
+              style={{ border: 'none', outline: 'none', flex: 1, fontSize: '13px', color: '#0f172a', minWidth: '0' }}
             />
-            <button style={{ background: '#2563eb', border: 'none', width: '32px', height: '32px', borderRadius: '50%', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, fontSize: '12px' }}>
+            <button style={{ background: '#2563eb', border: 'none', width: '36px', height: '36px', borderRadius: '50%', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, fontSize: '13px' }}>
               ➔
             </button>
           </div>
 
           {/* Feature Badges */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', marginTop: '18px', fontSize: '11px', color: '#cbd5e1', fontWeight: '500' }}>
-            <span>📖 Free to Read</span>
-            <span>⚡ Easy Access</span>
-            <span>🛡️ Safe & Secure</span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginTop: '22px', fontSize: '12px', color: '#e2e8f0', fontWeight: '500' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>📖 Free to Read</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>⚡ Easy Access</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>🛡️ Safe & Secure</span>
           </div>
         </div>
       </section>
 
-      {/* Featured Books Section */}
-      <section style={{ padding: '24px 18px 16px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+      {/* 3. Featured Books Grid */}
+      <section style={{ padding: '30px 20px 20px', maxWidth: '1200px', margin: '0 auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '18px' }}>
           <div>
-            <h2 style={{ fontSize: '18px', fontWeight: '800', margin: '0 0 2px' }}>Featured Books</h2>
-            <p style={{ color: '#64748b', fontSize: '11px', margin: 0 }}>Handpicked books just for you</p>
+            <h2 style={{ fontSize: '20px', fontWeight: '800', margin: '0 0 4px' }}>Featured Books</h2>
+            <p style={{ color: '#64748b', fontSize: '12px', margin: 0 }}>Handpicked books just for you</p>
           </div>
-          <span style={{ color: '#38bdf8', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>View All ➔</span>
+          <span style={{ color: '#38bdf8', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>View All ➔</span>
         </div>
 
         {loading ? (
-          <p style={{ color: '#64748b', fontSize: '12px' }}>Books load ho rahi hain...</p>
+          <p style={{ color: '#64748b', fontSize: '13px' }}>Books load ho rahi hain...</p>
         ) : (
-          <div style={{ display: 'flex', gap: '14px', overflowX: 'auto', paddingBottom: '10px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '18px' }}>
             {filteredBooks.map((book) => {
               const rawCover = book.cover_path || book.cover_url
               const cover = rawCover && rawCover.startsWith('http')
@@ -267,31 +269,40 @@ export default function HomePage() {
                 : `https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/covers/${rawCover || '1790700033242-teliy6.jpg'}`
 
               return (
-                <div key={book.id || book.title} style={{ minWidth: '170px', maxWidth: '170px', background: '#0e1626', borderRadius: '14px', padding: '10px', border: '1px solid #1a2538', display: 'flex', flexDirection: 'column' }}>
+                <div key={book.id || book.title} style={{
+                  background: '#0d1322',
+                  borderRadius: '16px',
+                  padding: '12px',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}>
                   <div style={{
-                    height: '220px',
-                    borderRadius: '8px',
-                    backgroundColor: '#1e293b',
+                    height: '240px',
+                    borderRadius: '10px',
+                    backgroundColor: '#161f33',
                     backgroundImage: `url(${cover})`,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
-                    marginBottom: '10px'
+                    marginBottom: '12px',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.5)'
                   }}></div>
 
-                  <h4 style={{ fontSize: '13px', fontWeight: '700', margin: '0 0 2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <h4 style={{ fontSize: '14px', fontWeight: '700', margin: '0 0 2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {book.title}
                   </h4>
-                  <p style={{ fontSize: '11px', color: '#64748b', margin: '0 0 8px' }}>
-                    {book.author || 'Author'}
+                  <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 10px' }}>
+                    {book.author || 'Tiger Soul'}
                   </p>
 
                   <div style={{ marginTop: 'auto' }}>
-                    <span style={{ display: 'inline-block', background: 'rgba(56,189,248,0.1)', color: '#38bdf8', fontSize: '10px', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px', marginBottom: '8px' }}>
+                    <span style={{ display: 'inline-block', background: 'rgba(56,189,248,0.1)', color: '#38bdf8', fontSize: '10px', fontWeight: 'bold', padding: '3px 8px', borderRadius: '6px', marginBottom: '10px' }}>
                       {book.category || 'Music'}
                     </span>
                     <button
                       onClick={() => handleReadBook(book)}
-                      style={{ width: '100%', background: '#2563eb', color: '#fff', border: 'none', padding: '7px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}
+                      style={{ width: '100%', background: '#2563eb', color: '#fff', border: 'none', padding: '9px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                     >
                       📖 Read Book
                     </button>
@@ -303,29 +314,29 @@ export default function HomePage() {
         )}
       </section>
 
-      {/* Browse by Category (Scrollable pills) */}
-      <section style={{ padding: '16px 18px 40px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+      {/* 4. Browse by Category */}
+      <section style={{ padding: '20px 20px 60px', maxWidth: '1200px', margin: '0 auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '16px' }}>
           <div>
-            <h2 style={{ fontSize: '16px', fontWeight: '800', margin: '0 0 2px' }}>Browse by Category</h2>
-            <p style={{ color: '#64748b', fontSize: '11px', margin: 0 }}>Find books in your favorite category</p>
+            <h2 style={{ fontSize: '18px', fontWeight: '800', margin: '0 0 4px' }}>Browse by Category</h2>
+            <p style={{ color: '#64748b', fontSize: '12px', margin: 0 }}>Find books in your favorite category</p>
           </div>
-          <span style={{ color: '#38bdf8', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>View All ➔</span>
+          <span style={{ color: '#38bdf8', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>View All ➔</span>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px' }}>
+        <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '8px' }}>
           {categoriesList.map((cat) => (
             <div key={cat.name} style={{
-              background: '#0e1626',
-              border: '1px solid #1a2538',
-              borderRadius: '20px',
-              padding: '8px 14px',
+              background: '#0d1322',
+              border: '1px solid rgba(255,255,255,0.06)',
+              borderRadius: '24px',
+              padding: '10px 16px',
               whiteSpace: 'nowrap',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
-              fontSize: '11px',
+              gap: '8px',
+              fontSize: '12px',
               fontWeight: '600'
             }}>
               <span>{cat.icon}</span>
@@ -337,38 +348,38 @@ export default function HomePage() {
 
       {/* Auth Modal Popup */}
       {showAuthModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
-          <div style={{ background: '#ffffff', borderRadius: '20px', padding: '24px 20px', width: '100%', maxWidth: '340px', textAlign: 'center', position: 'relative', color: '#0f172a' }}>
-            <button onClick={() => setShowAuthModal(false)} style={{ position: 'absolute', top: '12px', right: '14px', background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}>✕</button>
-            <div style={{ fontSize: '20px', marginBottom: '6px' }}>📖 Readora</div>
-            <h3 style={{ fontSize: '16px', fontWeight: '700', margin: '0 0 4px' }}>{isSignUp ? 'Create an Account' : 'Welcome Back!'}</h3>
-            <p style={{ fontSize: '11px', color: '#64748b', margin: '0 0 16px' }}>Sign in to read this book and access your library.</p>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
+          <div style={{ background: '#ffffff', borderRadius: '24px', padding: '28px 24px', width: '100%', maxWidth: '350px', textAlign: 'center', position: 'relative', color: '#0f172a' }}>
+            <button onClick={() => setShowAuthModal(false)} style={{ position: 'absolute', top: '14px', right: '16px', background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}>✕</button>
+            <div style={{ fontSize: '22px', marginBottom: '6px' }}>📖 Readora</div>
+            <h3 style={{ fontSize: '18px', fontWeight: '700', margin: '0 0 4px' }}>{isSignUp ? 'Create an Account' : 'Welcome Back!'}</h3>
+            <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 18px' }}>Sign in to read this book and access your library.</p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <button onClick={() => handleOAuthLogin('google')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '9px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#fff', color: '#0f172a', fontWeight: '600', fontSize: '12px', cursor: 'pointer' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <button onClick={() => handleOAuthLogin('google')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#fff', color: '#0f172a', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>
                 Continue with Google
               </button>
-              <button onClick={() => handleOAuthLogin('facebook')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '9px', borderRadius: '8px', border: 'none', background: '#1877F2', color: '#fff', fontWeight: '600', fontSize: '12px', cursor: 'pointer' }}>
+              <button onClick={() => handleOAuthLogin('facebook')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px', borderRadius: '10px', border: 'none', background: '#1877F2', color: '#fff', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>
                 Continue with Facebook
               </button>
-              <button onClick={() => setShowEmailForm(!showEmailForm)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '9px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#fff', color: '#0f172a', fontWeight: '600', fontSize: '12px', cursor: 'pointer' }}>
+              <button onClick={() => setShowEmailForm(!showEmailForm)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#fff', color: '#0f172a', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>
                 Continue with Email
               </button>
             </div>
 
             {showEmailForm && (
-              <form onSubmit={handleEmailAuth} style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <input type="email" placeholder="Enter email" value={email} onChange={(e) => setEmail(e.target.value)} required style={{ padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px', outline: 'none' }} />
-                <input type="password" placeholder="Enter password" value={password} onChange={(e) => setPassword(e.target.value)} required style={{ padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px', outline: 'none' }} />
-                <button type="submit" style={{ padding: '8px', borderRadius: '6px', border: 'none', background: '#0f172a', color: '#fff', fontWeight: '600', cursor: 'pointer', fontSize: '12px' }}>
+              <form onSubmit={handleEmailAuth} style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <input type="email" placeholder="Enter email" value={email} onChange={(e) => setEmail(e.target.value)} required style={{ padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px', outline: 'none' }} />
+                <input type="password" placeholder="Enter password" value={password} onChange={(e) => setPassword(e.target.value)} required style={{ padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px', outline: 'none' }} />
+                <button type="submit" style={{ padding: '9px', borderRadius: '8px', border: 'none', background: '#0f172a', color: '#fff', fontWeight: '600', cursor: 'pointer', fontSize: '12px' }}>
                   {isSignUp ? 'Sign Up' : 'Sign In'}
                 </button>
               </form>
             )}
 
-            {authError && <p style={{ fontSize: '11px', color: '#ef4444', marginTop: '6px' }}>{authError}</p>}
+            {authError && <p style={{ fontSize: '11px', color: '#ef4444', marginTop: '8px' }}>{authError}</p>}
 
-            <p style={{ fontSize: '11px', color: '#64748b', margin: '14px 0 0' }}>
+            <p style={{ fontSize: '12px', color: '#64748b', margin: '16px 0 0' }}>
               {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
               <span onClick={() => { setIsSignUp(!isSignUp); setShowEmailForm(true); }} style={{ color: '#2563eb', fontWeight: '600', cursor: 'pointer' }}>
                 {isSignUp ? 'Sign In' : 'Sign Up'}
@@ -379,5 +390,5 @@ export default function HomePage() {
       )}
     </div>
   )
-  }
-  
+        }
+    
