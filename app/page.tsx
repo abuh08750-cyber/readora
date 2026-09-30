@@ -14,8 +14,6 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   },
 })
 
-const DEFAULT_COVER = 'https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/covers/1790700033242-teliy6.jpg'
-
 export default function HomePage() {
   const [books, setBooks] = useState<any[]>([])
   const [user, setUser] = useState<any>(null)
@@ -28,40 +26,51 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // 1. Initial Session Check
+    // 1. URL Hash (#access_token=...) ko instantly parse karein
+    if (typeof window !== 'undefined' && window.location.hash.includes('access_token')) {
+      const hash = window.location.hash.substring(1)
+      const params = new URLSearchParams(hash)
+      const accessToken = params.get('access_token')
+      const refreshToken = params.get('refresh_token')
+
+      if (accessToken) {
+        supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken || '',
+        }).then(({ data, error }) => {
+          if (data?.session?.user) {
+            setUser(data.session.user)
+            setShowAuthModal(false)
+          }
+          // URL ko clean kar dein
+          window.history.replaceState(null, '', window.location.pathname)
+        })
+      }
+    }
+
+    // 2. Existing Session Check
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser(session.user)
       }
     })
 
-    // 2. Auth State Change Listener (Login/Logout detect karega)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    // 3. Auth Listener (Login / Logout real-time catch karega)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUser(session.user)
         setShowAuthModal(false)
-      } else if (event === 'SIGNED_OUT') {
+      } else {
         setUser(null)
       }
     })
 
-    // 3. Supabase Database se books fetch karein
+    // 4. Books Fetch
     async function fetchBooks() {
       try {
         const { data, error } = await supabase.from('books').select('*')
         if (!error && data && data.length > 0) {
           setBooks(data)
-        } else {
-          // Fallback to default book agar DB response na de
-          setBooks([
-            {
-              id: 'dfb9528e-8466-4c5f-aeab-0329ae420bf1',
-              title: 'ZERO SE ARTIST - Part 1',
-              author: 'Readora',
-              cover_path: DEFAULT_COVER,
-              file_path: '1790700033242-teliy6.pdf',
-            }
-          ])
         }
       } catch (err) {
         console.error('Fetch error:', err)
@@ -79,7 +88,7 @@ export default function HomePage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/`,
+        redirectTo: window.location.origin,
       },
     })
     if (error) setAuthError(error.message)
@@ -120,7 +129,7 @@ export default function HomePage() {
         : `https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/ebooks/${file}`
       window.open(url, '_blank')
     } else {
-      alert(`किताब खुल रही है: ${book.title}`)
+      alert(`Kitab open ho rahi hai: ${book.title}`)
     }
   }
 
@@ -167,18 +176,18 @@ export default function HomePage() {
         <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px' }}>Featured Books</h2>
 
         {loading ? (
-          <p style={{ color: '#64748b' }}>लोड हो रहा है...</p>
+          <p style={{ color: '#64748b' }}>Loading books...</p>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px' }}>
             {books.map((book) => {
-              const cover = book.cover_path || book.cover_url || book.cover_image || DEFAULT_COVER
+              const cover = book.cover_path || book.cover_url || book.cover_image
               return (
                 <div key={book.id} style={{ background: '#111827', borderRadius: '14px', padding: '14px', border: '1px solid #1f2937' }}>
                   <div style={{
-                    height: '210px',
+                    height: '220px',
                     borderRadius: '10px',
                     backgroundColor: '#1e293b',
-                    backgroundImage: `url(${cover})`,
+                    backgroundImage: cover ? `url(${cover})` : 'none',
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                     marginBottom: '12px',
@@ -334,4 +343,5 @@ export default function HomePage() {
       )}
     </div>
   )
-}
+        }
+        
