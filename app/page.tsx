@@ -14,19 +14,10 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   },
 })
 
-const defaultBooks = [
-  {
-    id: 'dfb9528e-8466-4c5f-aeab-0329ae420bf1',
-    title: 'ZERO SE ARTIST - Part 1',
-    author: 'Readora',
-    category: 'Music',
-    cover_url: '',
-    file_url: '',
-  },
-]
+const DEFAULT_COVER = 'https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/covers/1790700033242-teliy6.jpg'
 
 export default function HomePage() {
-  const [books, setBooks] = useState<any[]>(defaultBooks)
+  const [books, setBooks] = useState<any[]>([])
   const [user, setUser] = useState<any>(null)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [isSignUp, setIsSignUp] = useState(false)
@@ -34,6 +25,7 @@ export default function HomePage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [authError, setAuthError] = useState('')
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     // 1. Initial Session Check
@@ -43,12 +35,12 @@ export default function HomePage() {
       }
     })
 
-    // 2. Auth State Change Listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    // 2. Auth State Change Listener (Login/Logout detect karega)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
         setUser(session.user)
         setShowAuthModal(false)
-      } else {
+      } else if (event === 'SIGNED_OUT') {
         setUser(null)
       }
     })
@@ -59,9 +51,22 @@ export default function HomePage() {
         const { data, error } = await supabase.from('books').select('*')
         if (!error && data && data.length > 0) {
           setBooks(data)
+        } else {
+          // Fallback to default book agar DB response na de
+          setBooks([
+            {
+              id: 'dfb9528e-8466-4c5f-aeab-0329ae420bf1',
+              title: 'ZERO SE ARTIST - Part 1',
+              author: 'Readora',
+              cover_path: DEFAULT_COVER,
+              file_path: '1790700033242-teliy6.pdf',
+            }
+          ])
         }
       } catch (err) {
-        console.error('Error fetching books:', err)
+        console.error('Fetch error:', err)
+      } finally {
+        setLoading(false)
       }
     }
     fetchBooks()
@@ -69,19 +74,17 @@ export default function HomePage() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // OAuth Login (Google & Facebook) with /auth/callback redirect
   const handleOAuthLogin = async (provider: 'google' | 'facebook') => {
     setAuthError('')
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${window.location.origin}/`,
       },
     })
     if (error) setAuthError(error.message)
   }
 
-  // Email Sign In / Sign Up
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault()
     setAuthError('')
@@ -110,9 +113,12 @@ export default function HomePage() {
       return
     }
 
-    const fileUrl = book.file_url || book.pdf_url || book.url || book.file_path
-    if (fileUrl) {
-      window.open(fileUrl, '_blank')
+    const file = book.file_path || book.file_url || book.pdf_url
+    if (file) {
+      const url = file.startsWith('http') 
+        ? file 
+        : `https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/ebooks/${file}`
+      window.open(url, '_blank')
     } else {
       alert(`किताब खुल रही है: ${book.title}`)
     }
@@ -160,49 +166,42 @@ export default function HomePage() {
       <section style={{ padding: '10px 20px 60px' }}>
         <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px' }}>Featured Books</h2>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px' }}>
-          {books.map((book) => {
-            const rawCover = book.cover_url || book.cover_image || book.cover || book.image || book.thumbnail || book.image_url
-            return (
-              <div key={book.id} style={{ background: '#111827', borderRadius: '14px', padding: '14px', border: '1px solid #1f2937' }}>
-                <div style={{
-                  height: '200px',
-                  borderRadius: '10px',
-                  backgroundColor: '#1e293b',
-                  backgroundImage: rawCover ? `url(${rawCover})` : 'linear-gradient(135deg, #1e3a8a, #0f172a)',
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '12px',
-                  textAlign: 'center',
-                  marginBottom: '12px'
-                }}>
-                  {!rawCover && (
-                    <>
-                      <span style={{ fontSize: '32px', marginBottom: '8px' }}>🎧</span>
-                      <span style={{ fontWeight: 'bold', fontSize: '13px', color: '#fff' }}>{book.title}</span>
-                    </>
-                  )}
+        {loading ? (
+          <p style={{ color: '#64748b' }}>लोड हो रहा है...</p>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px' }}>
+            {books.map((book) => {
+              const cover = book.cover_path || book.cover_url || book.cover_image || DEFAULT_COVER
+              return (
+                <div key={book.id} style={{ background: '#111827', borderRadius: '14px', padding: '14px', border: '1px solid #1f2937' }}>
+                  <div style={{
+                    height: '210px',
+                    borderRadius: '10px',
+                    backgroundColor: '#1e293b',
+                    backgroundImage: `url(${cover})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    marginBottom: '12px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
+                  }}>
+                  </div>
+                  <h4 style={{ fontSize: '14px', margin: '0 0 4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {book.title}
+                  </h4>
+                  <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 12px' }}>
+                    {book.author || 'Readora'}
+                  </p>
+                  <button 
+                    onClick={() => handleReadBook(book)} 
+                    style={{ width: '100%', background: '#2563eb', color: '#fff', border: 'none', padding: '9px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}
+                  >
+                    📖 Read Book
+                  </button>
                 </div>
-                <h4 style={{ fontSize: '14px', margin: '0 0 4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {book.title}
-                </h4>
-                <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 12px' }}>
-                  {book.author || 'Readora'}
-                </p>
-                <button 
-                  onClick={() => handleReadBook(book)} 
-                  style={{ width: '100%', background: '#2563eb', color: '#fff', border: 'none', padding: '9px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}
-                >
-                  📖 Read Book
-                </button>
-              </div>
-            )
-          })}
-        </div>
+              )
+            })}
+          </div>
+        )}
       </section>
 
       {/* Auth Modal Popup */}
@@ -335,5 +334,4 @@ export default function HomePage() {
       )}
     </div>
   )
-    }
-    
+}
