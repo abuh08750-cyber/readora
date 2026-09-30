@@ -7,71 +7,42 @@ const SUPABASE_URL = 'https://stuabcdisgmmxprapfai.supabase.co'
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0dWFiY2Rpc2dtbXhwcmFwZmFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1Njc1NjksImV4cCI6MjEwNjE0MzU2OX0.pGvaQQBWGcbDKgDb_9F1jkUURVXH3bhJ-trQt-GXBZ8'
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-  },
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
 })
 
-const filterCategories = [
-  'All Books',
-  'Music',
-  'Self Help',
-  'Business',
-  'Technology',
-  'Education',
-  'Fiction',
-  'Health',
-  'Writing',
-]
+const filterCategories = ['All Books', 'Music', 'Self Help', 'Business', 'Technology', 'Education', 'Fiction', 'Health', 'Writing']
 
 export default function LibraryPage() {
   const [books, setBooks] = useState<any[]>([])
   const [user, setUser] = useState<any>(null)
-  const [showAuthModal, setShowAuthModal] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState('All Books')
   const [searchQuery, setSearchQuery] = useState('')
   const [readingFile, setReadingFile] = useState<string | null>(null)
   const [readingTitle, setReadingTitle] = useState('')
   const [htmlData, setHtmlData] = useState<string | null>(null)
-  const [isSignUp, setIsSignUp] = useState(false)
-  const [showEmailForm, setShowEmailForm] = useState(false)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [authError, setAuthError] = useState('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) setUser(session.user)
     })
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUser(session.user)
-        setShowAuthModal(false)
-      } else {
-        setUser(null)
-      }
+      setUser(session?.user || null)
     })
-
     async function loadBooks() {
       try {
         const { data, error } = await supabase.from('books').select('*')
         if (!error && data && data.length > 0) {
           setBooks(data)
         } else {
-          setBooks([
-            {
-              id: 'dfb9528e-8466-4c5f-aeab-0329ae420bf1',
-              title: 'ZERO SE ARTIST - Part 1',
-              author: 'Readora',
-              category: 'Music',
-              cover_path: 'https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/covers/1790700033242-teliy6.jpg',
-              file_path: 'https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/ebooks/1790700034105-biegrb.html',
-            }
-          ])
+          setBooks([{
+            id: 'dfb9528e-8466-4c5f-aeab-0329ae420bf1',
+            title: 'ZERO SE ARTIST - Part 1',
+            author: 'Readora',
+            category: 'Music',
+            cover_path: 'https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/covers/1790700033242-teliy6.jpg',
+            file_path: 'https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/ebooks/1790700034105-biegrb.html',
+          }])
         }
       } catch (err) {
         console.error(err)
@@ -80,53 +51,12 @@ export default function LibraryPage() {
       }
     }
     loadBooks()
-
     return () => subscription.unsubscribe()
   }, [])
 
-  const handleOAuth = async (provider: 'google' | 'facebook') => {
-    setAuthError('')
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: window.location.origin },
-    })
-    if (error) setAuthError(error.message)
-  }
-
-  const handleEmailAuth = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setAuthError('')
-    if (isSignUp) {
-      const { error } = await supabase.auth.signUp({ email, password })
-      if (error) setAuthError(error.message)
-      else setAuthError('Confirmation email भेजा गया है!')
-    } else {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) setAuthError(error.message)
-      else if (data?.user) {
-        setUser(data.user)
-        setShowAuthModal(false)
-      }
-    }
-  }
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    setUser(null)
-    setReadingFile(null)
-  }
-
   const handleRead = async (book: any) => {
-    if (!user) {
-      setShowAuthModal(true)
-      return
-    }
-
     const rawFile = book.file_path || book.file_url || 'https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/ebooks/1790700034105-biegrb.html'
-    const fullUrl = rawFile.startsWith('http')
-      ? rawFile
-      : `https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/ebooks/${rawFile}`
-
+    const fullUrl = rawFile.startsWith('http') ? rawFile : `https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/ebooks/${rawFile}`
     setReadingTitle(book.title || 'Book Reader')
 
     if (fullUrl.includes('.html')) {
@@ -144,22 +74,17 @@ export default function LibraryPage() {
   }
 
   const filtered = books.filter(b => {
-    const matchesSearch =
-      b.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      b.author?.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesCat =
-      selectedCategory === 'All Books' || b.category?.toLowerCase() === selectedCategory.toLowerCase()
-    return matchesSearch && matchesCat
+    const matchSearch = b.title?.toLowerCase().includes(searchQuery.toLowerCase()) || b.author?.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchCat = selectedCategory === 'All Books' || b.category?.toLowerCase() === selectedCategory.toLowerCase()
+    return matchSearch && matchCat
   })
 
   if (readingFile && htmlData) {
     return (
       <div style={{ position: 'fixed', inset: 0, background: '#0B0F17', zIndex: 9999, display: 'flex', flexDirection: 'column' }}>
         <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 24px', background: '#090d16', borderBottom: '1px solid #1e293b' }}>
-          <div style={{ color: '#fff', fontWeight: 'bold', fontSize: '15px' }}>📖 {readingTitle}</div>
-          <button onClick={() => setReadingFile(null)} style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
-            ✕ Close Reader
-          </button>
+          <div style={{ color: '#fff', fontWeight: 'bold' }}>📖 {readingTitle}</div>
+          <button onClick={() => setReadingFile(null)} style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>✕ Close</button>
         </header>
         <iframe srcDoc={htmlData} style={{ width: '100%', flex: 1, border: 'none' }} title={readingTitle} />
       </div>
@@ -168,285 +93,120 @@ export default function LibraryPage() {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#070b14', color: '#f8fafc', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-      
       {/* Sidebar */}
-      <aside style={{
-        width: '240px',
-        background: '#070b14',
-        borderRight: '1px solid rgba(255,255,255,0.06)',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        padding: '24px 16px',
-        boxSizing: 'border-box',
-        flexShrink: 0
-      }}>
+      <aside style={{ width: '230px', background: '#070b14', borderRight: '1px solid rgba(255,255,255,0.06)', padding: '24px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxSizing: 'border-box', flexShrink: 0 }}>
         <div>
-          <div 
-            onClick={() => window.location.href = '/'}
-            style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '20px', fontWeight: '800', marginBottom: '32px', paddingLeft: '8px', cursor: 'pointer' }}
-          >
-            <span>📖</span>
-            <span>Readora</span>
+          <div onClick={() => window.location.href = '/'} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '20px', fontWeight: '800', marginBottom: '30px', cursor: 'pointer' }}>
+            <span>📖</span><span>Readora</span>
           </div>
-
           <nav style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <div 
-              onClick={() => window.location.href = '/'}
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#94a3b8' }}
-            >
-              <span>🏠</span> Home
-            </div>
-
-            <div 
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#fff', background: '#1d4ed8' }}
-            >
-              <span>📖</span> Library
-            </div>
-
-            <div 
-              onClick={() => window.location.href = '/#category-section'}
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#94a3b8' }}
-            >
-              <span>🗂️</span> Categories
-            </div>
-
-            <div style={{ height: '1px', background: 'rgba(255,255,255,0.06)', margin: '14px 0' }} />
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '10px', cursor: 'pointer', fontSize: '13px', color: '#94a3b8' }}>
-              <span>📑</span> My Books
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '10px', cursor: 'pointer', fontSize: '13px', color: '#94a3b8' }}>
-              <span>🕒</span> Recently Read
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '10px', cursor: 'pointer', fontSize: '13px', color: '#94a3b8' }}>
-              <span>🤍</span> Favorites
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '10px', cursor: 'pointer', fontSize: '13px', color: '#94a3b8' }}>
-              <span>⚙️</span> Settings
-            </div>
+            <div onClick={() => window.location.href = '/'} style={{ padding: '10px 14px', borderRadius: '8px', cursor: 'pointer', color: '#94a3b8', fontSize: '13px' }}>🏠 Home</div>
+            <div style={{ padding: '10px 14px', borderRadius: '8px', cursor: 'pointer', color: '#fff', background: '#1d4ed8', fontSize: '13px', fontWeight: '600' }}>📖 Library</div>
+            <div onClick={() => window.location.href = '/#category-section'} style={{ padding: '10px 14px', borderRadius: '8px', cursor: 'pointer', color: '#94a3b8', fontSize: '13px' }}>🗂️ Categories</div>
+            <div style={{ height: '1px', background: 'rgba(255,255,255,0.06)', margin: '12px 0' }} />
+            <div style={{ padding: '8px 14px', color: '#94a3b8', fontSize: '13px' }}>📑 My Books</div>
+            <div style={{ padding: '8px 14px', color: '#94a3b8', fontSize: '13px' }}>🕒 Recently Read</div>
+            <div style={{ padding: '8px 14px', color: '#94a3b8', fontSize: '13px' }}>🤍 Favorites</div>
+            <div style={{ padding: '8px 14px', color: '#94a3b8', fontSize: '13px' }}>⚙️ Settings</div>
           </nav>
         </div>
-
-        <div style={{
-          background: 'linear-gradient(180deg, #111827 0%, #0b0f19 100%)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: '14px',
-          padding: '16px',
-          fontSize: '12px'
-        }}>
-          <p style={{ margin: '0 0 6px', fontWeight: '700', lineHeight: 1.3 }}>Better Books<br />Bigger Dreams</p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#38bdf8', fontSize: '11px', fontWeight: 'bold' }}>
-            <span>📖</span> Readora
-          </div>
+        <div style={{ background: '#0d1322', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '14px', fontSize: '12px' }}>
+          <p style={{ margin: '0 0 4px', fontWeight: '700' }}>Better Books<br />Bigger Dreams</p>
+          <span style={{ color: '#38bdf8', fontWeight: 'bold' }}>📖 Readora</span>
         </div>
       </aside>
 
       {/* Main Content */}
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        
         {/* Top Header */}
-        <header style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '16px 32px',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
-          background: '#070b14',
-          position: 'sticky',
-          top: 0,
-          zIndex: 40
-        }}>
-          <div style={{ position: 'relative', width: '380px', maxWidth: '60%' }}>
-            <span style={{ position: 'absolute', left: '12px', top: '10px', color: '#64748b', fontSize: '14px' }}>🔍</span>
+        <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 28px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#070b14', position: 'sticky', top: 0, zIndex: 40 }}>
+          <div style={{ position: 'relative', width: '360px', maxWidth: '60%' }}>
+            <span style={{ position: 'absolute', left: '12px', top: '9px', color: '#64748b' }}>🔍</span>
             <input
               type="text"
               placeholder="Search for books, authors, or categories..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              style={{
-                width: '100%',
-                background: '#0d1322',
-                border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: '24px',
-                padding: '9px 16px 9px 38px',
-                color: '#fff',
-                fontSize: '13px',
-                outline: 'none',
-                boxSizing: 'border-box'
-              }}
+              style={{ width: '100%', background: '#0d1322', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '20px', padding: '8px 14px 8px 36px', color: '#fff', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
             />
           </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <button style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '16px', cursor: 'pointer' }}>☀️</button>
-            <div style={{ position: 'relative', cursor: 'pointer' }}>
-              <span style={{ color: '#94a3b8', fontSize: '16px' }}>🔔</span>
-              <span style={{ position: 'absolute', top: '-2px', right: '-2px', width: '6px', height: '6px', background: '#ef4444', borderRadius: '50%' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span>☀️</span>
+            <span>🔔</span>
+            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '12px' }}>
+              {user?.email ? user.email.charAt(0).toUpperCase() : 'U'}
             </div>
-
-            {user ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '13px' }}>
-                  {user.email?.charAt(0).toUpperCase()}
-                </div>
-                <button onClick={handleLogout} style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>
-                  Logout
-                </button>
-              </div>
-            ) : (
-              <button onClick={() => setShowAuthModal(true)} style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>
-                Sign In
-              </button>
-            )}
           </div>
         </header>
 
-        {/* Library Content */}
-        <div style={{ padding: '28px 32px 60px', overflowY: 'auto' }}>
-          
+        {/* Library Page Content */}
+        <div style={{ padding: '24px 28px 60px', overflowY: 'auto' }}>
           {/* Banner */}
           <section style={{
             position: 'relative',
-            borderRadius: '20px',
+            borderRadius: '16px',
             overflow: 'hidden',
-            padding: '36px',
-            marginBottom: '28px',
+            padding: '32px',
+            marginBottom: '24px',
             backgroundImage: "linear-gradient(to right, #090e1a 40%, rgba(9,14,26,0.8) 60%, rgba(9,14,26,0.3) 100%), url('https://images.unsplash.com/photo-1507842229451-7f01be7ff6ab?w=1600&auto=format&fit=crop&q=80')",
             backgroundSize: 'cover',
             backgroundPosition: 'right center',
             border: '1px solid rgba(255,255,255,0.06)'
           }}>
-            <div>
-              <span style={{ fontSize: '11px', fontWeight: '800', color: '#38bdf8', letterSpacing: '1px' }}>LIBRARY</span>
-              <h1 style={{ fontSize: '32px', fontWeight: '900', margin: '6px 0 10px' }}>Your Book Collection</h1>
-              <p style={{ color: '#94a3b8', fontSize: '14px', margin: 0 }}>Explore, read and grow with our curated collection of books.</p>
-            </div>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#38bdf8', letterSpacing: '1px' }}>LIBRARY</span>
+            <h1 style={{ fontSize: '30px', fontWeight: '900', margin: '6px 0 8px' }}>Your Book Collection</h1>
+            <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0 }}>Explore, read and grow with our curated collection of books.</p>
           </section>
 
-          {/* Filters */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '14px' }}>
-            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
-              {filterCategories.map((cat) => {
-                const active = selectedCategory === cat
-                return (
-                  <button
-                    key={cat}
-                    onClick={() => setSelectedCategory(cat)}
-                    style={{
-                      background: active ? '#2563eb' : '#0d1322',
-                      color: active ? '#ffffff' : '#94a3b8',
-                      border: active ? '1px solid #2563eb' : '1px solid rgba(255,255,255,0.08)',
-                      borderRadius: '20px',
-                      padding: '7px 16px',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap'
-                    }}
-                  >
-                    {cat}
-                  </button>
-                )
-              })}
+          {/* Filter Pills */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', gap: '12px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto' }}>
+              {filterCategories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  style={{
+                    background: selectedCategory === cat ? '#2563eb' : '#0d1322',
+                    color: selectedCategory === cat ? '#fff' : '#94a3b8',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: '20px',
+                    padding: '6px 14px',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  {cat}
+                </button>
+              ))}
             </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#0d1322', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '6px 14px', fontSize: '12px', color: '#94a3b8', cursor: 'pointer' }}>
-              <span>Sort by</span>
-              <span>⌵</span>
+            <div style={{ background: '#0d1322', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', color: '#94a3b8' }}>
+              Sort by ⌵
             </div>
           </div>
 
-          {/* Grid */}
+          {/* Books Grid */}
           {loading ? (
             <p style={{ color: '#64748b' }}>Books load ho rahi hain...</p>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: '18px' }}>
               {filtered.map((book) => {
                 const rawCover = book.cover_path || book.cover_url
-                const cover = rawCover && rawCover.startsWith('http')
-                  ? rawCover
-                  : `https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/covers/${rawCover || '1790700033242-teliy6.jpg'}`
+                const cover = rawCover && rawCover.startsWith('http') ? rawCover : `https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/covers/${rawCover || '1790700033242-teliy6.jpg'}`
 
                 return (
-                  <div key={book.id || book.title} style={{
-                    background: '#0d1322',
-                    borderRadius: '16px',
-                    padding: '12px',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    position: 'relative'
-                  }}>
-                    <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 10, background: 'rgba(0,0,0,0.4)', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer' }}>
-                      <span style={{ fontSize: '12px', color: '#fff' }}>🔖</span>
+                  <div key={book.id || book.title} style={{ background: '#0d1322', borderRadius: '14px', padding: '12px', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ height: '220px', borderRadius: '8px', backgroundColor: '#161f33', backgroundImage: `url(${cover})`, backgroundSize: 'cover', backgroundPosition: 'center', marginBottom: '10px' }} />
+                    <h4 style={{ fontSize: '13px', fontWeight: '700', margin: '0 0 2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{book.title}</h4>
+                    <p style={{ fontSize: '11px', color: '#64748b', margin: '0 0 8px' }}>{book.author || 'Readora'}</p>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                      <span style={{ background: 'rgba(56,189,248,0.12)', color: '#38bdf8', fontSize: '10px', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px' }}>{book.category || 'Music'}</span>
+                      <span style={{ color: '#64748b' }}>•••</span>
                     </div>
-
-                    <div style={{
-                      height: '240px',
-                      borderRadius: '10px',
-                      backgroundColor: '#161f33',
-                      backgroundImage: `url(${cover})`,
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center',
-                      marginBottom: '12px'
-                    }}></div>
-
-                    <h4 style={{ fontSize: '14px', fontWeight: '700', margin: '0 0 2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {book.title}
-                    </h4>
-                    <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 10px' }}>
-                      {book.author || 'Readora'}
-                    </p>
-
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                      <span style={{
-                        background: 'rgba(56,189,248,0.12)',
-                        color: '#38bdf8',
-                        fontSize: '11px',
-                        fontWeight: '700',
-                        padding: '3px 8px',
-                        borderRadius: '6px'
-                      }}>
-                        {book.category || 'Music'}
-                      </span>
-                      <span style={{ color: '#64748b', cursor: 'pointer', fontSize: '14px' }}>•••</span>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
-                      <button style={{
-                        flex: 1,
-                        background: 'rgba(255,255,255,0.05)',
-                        color: '#94a3b8',
-                        border: '1px solid rgba(255,255,255,0.08)',
-                        padding: '8px 0',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                        fontWeight: '600'
-                      }}>
-                        Details
-                      </button>
-                      <button
-                        onClick={() => handleRead(book)}
-                        style={{
-                          flex: 1.5,
-                          background: '#2563eb',
-                          color: '#fff',
-                          border: 'none',
-                          padding: '8px 0',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          fontSize: '12px',
-                          fontWeight: '700',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '4px'
-                        }}
-                      >
-                        📖 Read Book
-                      </button>
+                    <div style={{ display: 'flex', gap: '6px', marginTop: 'auto' }}>
+                      <button style={{ flex: 1, background: 'rgba(255,255,255,0.05)', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.08)', padding: '7px 0', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '600' }}>Details</button>
+                      <button onClick={() => handleRead(book)} style={{ flex: 1.4, background: '#2563eb', color: '#fff', border: 'none', padding: '7px 0', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '700' }}>📖 Read Book</button>
                     </div>
                   </div>
                 )
@@ -455,10 +215,7 @@ export default function LibraryPage() {
           )}
         </div>
       </main>
-
-      {/* Auth Modal Popup */}
-      {showAuthModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-          <div style={{ background: '#ffffff', borderRadius: '24px', padding: '30px 24px', width: '100%', maxWidth: '350px', textAlign: 'center', position: 'relative', color: '#0f172a' }}>
-            <button onClick={() => setShowAuthModal(false)} style={{ position: 'absolute', top: '14px', right: '16px', background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}>✕</button>
-            <div style={{ fontS
+    </div>
+  )
+                                         }
+    
