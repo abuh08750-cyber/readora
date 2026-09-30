@@ -16,20 +16,29 @@ export default function LibraryPage() {
   const [books, setBooks] = useState<any[]>([])
   const [user, setUser] = useState<any>(null)
   const [cat, setCat] = useState('All Books')
-  const [tab, setTab] = useState<'all' | 'mybooks' | 'favorites'>('all')
+  const [tab, setTab] = useState<'all' | 'mybooks' | 'recent' | 'favorites'>('all')
   const [likes, setLikes] = useState<string[]>([])
   const [saves, setSaves] = useState<string[]>([])
+  const [recent, setRecent] = useState<string[]>([])
   const [details, setDetails] = useState<any>(null)
+  const [showSettings, setShowSettings] = useState(false)
+  const [showUserMenu, setShowUserMenu] = useState(false)
   const [reader, setReader] = useState<{ url: string; title: string; html: string } | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => setUser(session?.user || null))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null)
+    })
+
     try {
       const l = localStorage.getItem('rd_likes')
       if (l) setLikes(JSON.parse(l))
       const s = localStorage.getItem('rd_saves')
       if (s) setSaves(JSON.parse(s))
+      const r = localStorage.getItem('rd_recent')
+      if (r) setRecent(JSON.parse(r))
     } catch {}
 
     async function load() {
@@ -46,6 +55,7 @@ export default function LibraryPage() {
       setLoading(false)
     }
     load()
+    return () => subscription.unsubscribe()
   }, [])
 
   const toggleLike = (id: string) => {
@@ -61,6 +71,10 @@ export default function LibraryPage() {
   }
 
   const openBook = async (b: any) => {
+    const updatedRecent = [b.id, ...recent.filter(id => id !== b.id)]
+    setRecent(updatedRecent)
+    try { localStorage.setItem('rd_recent', JSON.stringify(updatedRecent)) } catch {}
+
     const raw = b.file_path || b.file_url || 'https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/ebooks/1790700034105-biegrb.html'
     const full = raw.startsWith('http') ? raw : `https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/ebooks/${raw}`
     if (full.includes('.html')) {
@@ -72,9 +86,19 @@ export default function LibraryPage() {
     } else { window.open(full, '_blank') }
   }
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    setUser(null)
+    setShowUserMenu(false)
+    setShowSettings(false)
+  }
+
   const filtered = books.filter(b => {
     const matchCat = cat === 'All Books' || b.category?.toLowerCase() === cat.toLowerCase()
-    const matchTab = tab === 'all' || (tab === 'mybooks' && saves.includes(b.id)) || (tab === 'favorites' && likes.includes(b.id))
+    const matchTab = tab === 'all' 
+      || (tab === 'mybooks' && saves.includes(b.id)) 
+      || (tab === 'favorites' && likes.includes(b.id))
+      || (tab === 'recent' && recent.includes(b.id))
     return matchCat && matchTab
   })
 
@@ -93,7 +117,7 @@ export default function LibraryPage() {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#070b14', color: '#f8fafc', fontFamily: 'system-ui, sans-serif' }}>
       
-      {/* Sidebar */}
+      {/* Sidebar Navigation */}
       <aside style={{ width: '200px', background: '#070b14', borderRight: '1px solid rgba(255,255,255,0.06)', padding: '20px 12px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', flexShrink: 0 }}>
         <div>
           <div onClick={() => window.location.href = '/'} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '18px', fontWeight: '800', marginBottom: '24px', cursor: 'pointer' }}>
@@ -103,7 +127,9 @@ export default function LibraryPage() {
             <div onClick={() => window.location.href = '/'} style={{ padding: '8px 10px', borderRadius: '6px', cursor: 'pointer', color: '#94a3b8' }}>🏠 Home</div>
             <div onClick={() => { setTab('all'); setCat('All Books'); }} style={{ padding: '8px 10px', borderRadius: '6px', cursor: 'pointer', color: '#fff', background: tab === 'all' ? '#1d4ed8' : 'transparent', fontWeight: 'bold' }}>📖 Library</div>
             <div onClick={() => setTab('mybooks')} style={{ padding: '8px 10px', borderRadius: '6px', cursor: 'pointer', color: tab === 'mybooks' ? '#fff' : '#94a3b8', background: tab === 'mybooks' ? '#1d4ed8' : 'transparent' }}>📑 My Books ({saves.length})</div>
+            <div onClick={() => setTab('recent')} style={{ padding: '8px 10px', borderRadius: '6px', cursor: 'pointer', color: tab === 'recent' ? '#fff' : '#94a3b8', background: tab === 'recent' ? '#1d4ed8' : 'transparent' }}>🕒 Recently Read ({recent.length})</div>
             <div onClick={() => setTab('favorites')} style={{ padding: '8px 10px', borderRadius: '6px', cursor: 'pointer', color: tab === 'favorites' ? '#fff' : '#94a3b8', background: tab === 'favorites' ? '#1d4ed8' : 'transparent' }}>❤️ Liked ({likes.length})</div>
+            <div onClick={() => setShowSettings(true)} style={{ padding: '8px 10px', borderRadius: '6px', cursor: 'pointer', color: '#94a3b8' }}>⚙️ Settings</div>
           </nav>
         </div>
         <div style={{ background: '#0d1322', padding: '10px', borderRadius: '8px', fontSize: '11px', border: '1px solid rgba(255,255,255,0.06)' }}>
@@ -113,18 +139,50 @@ export default function LibraryPage() {
 
       {/* Main Panel */}
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <header style={{ padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '13px', color: '#94a3b8' }}>{tab === 'all' ? 'Book Collection' : tab === 'mybooks' ? 'My Saved Shelf' : 'Liked Books'}</span>
-          <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '11px' }}>
-            {user?.email ? user.email.charAt(0).toUpperCase() : 'U'}
+        
+        {/* Header Bar */}
+        <header style={{ padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 100 }}>
+          <span style={{ fontSize: '13px', color: '#94a3b8' }}>
+            {tab === 'all' ? 'Book Collection' : tab === 'mybooks' ? 'My Saved Shelf' : tab === 'recent' ? 'Recently Read' : 'Liked Books'}
+          </span>
+          
+          {/* User Button */}
+          <div style={{ position: 'relative' }}>
+            <button 
+              type="button"
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#2563eb', color: '#fff', border: '2px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '13px', cursor: 'pointer', outline: 'none' }}
+            >
+              {user?.email ? user.email.charAt(0).toUpperCase() : 'U'}
+            </button>
+
+            {/* Dropdown Popup */}
+            {showUserMenu && (
+              <div style={{ position: 'absolute', right: 0, top: '42px', background: '#0e1628', border: '1px solid #1e293b', borderRadius: '10px', padding: '12px', minWidth: '170px', boxShadow: '0 12px 30px rgba(0,0,0,0.8)', zIndex: 999 }}>
+                <p style={{ margin: '0 0 6px', fontSize: '11px', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {user?.email || 'Guest User'}
+                </p>
+                <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '6px 0' }} />
+                <button onClick={() => { setShowSettings(true); setShowUserMenu(false); }} style={{ width: '100%', background: 'none', border: 'none', color: '#f8fafc', textAlign: 'left', padding: '6px 0', fontSize: '12px', cursor: 'pointer' }}>⚙️ Settings</button>
+                {user ? (
+                  <button onClick={handleLogout} style={{ width: '100%', background: 'none', border: 'none', color: '#ef4444', textAlign: 'left', padding: '6px 0', fontSize: '12px', cursor: 'pointer', fontWeight: 'bold' }}>🚪 Logout</button>
+                ) : (
+                  <button onClick={() => window.location.href = '/'} style={{ width: '100%', background: 'none', border: 'none', color: '#38bdf8', textAlign: 'left', padding: '6px 0', fontSize: '12px', cursor: 'pointer', fontWeight: 'bold' }}>🔑 Sign In</button>
+                )}
+              </div>
+            )}
           </div>
         </header>
 
         <div style={{ padding: '16px 20px 40px', overflowY: 'auto' }}>
           {/* Banner */}
           <div style={{ padding: '24px 20px', borderRadius: '14px', background: "linear-gradient(to right, #090e1a 45%, rgba(9,14,26,0.85) 75%), url('https://images.unsplash.com/photo-1507842229451-7f01be7ff6ab?w=1000&auto=format&fit=crop&q=80')", backgroundSize: 'cover', border: '1px solid rgba(255,255,255,0.06)', marginBottom: '16px' }}>
-            <span style={{ fontSize: '10px', color: '#38bdf8', fontWeight: '800' }}>LIBRARY</span>
-            <h2 style={{ margin: '4px 0', fontSize: '22px' }}>Your Collection</h2>
+            <span style={{ fontSize: '10px', color: '#38bdf8', fontWeight: '800' }}>
+              {tab === 'recent' ? 'RECENT' : tab === 'mybooks' ? 'SAVED' : tab === 'favorites' ? 'LIKED' : 'LIBRARY'}
+            </span>
+            <h2 style={{ margin: '4px 0', fontSize: '22px' }}>
+              {tab === 'recent' ? 'Recently Read Books' : tab === 'mybooks' ? 'Saved Shelf' : tab === 'favorites' ? 'Liked Books' : 'Your Collection'}
+            </h2>
             <p style={{ margin: 0, color: '#94a3b8', fontSize: '12px' }}>Explore, read and grow with curated books.</p>
           </div>
 
@@ -190,7 +248,26 @@ export default function LibraryPage() {
           </div>
         </div>
       )}
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
+          <div style={{ background: '#0d1322', border: '1px solid #1e293b', borderRadius: '12px', padding: '20px', maxWidth: '320px', width: '100%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <b style={{ fontSize: '15px' }}>App Settings</b>
+              <button onClick={() => setShowSettings(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '16px', cursor: 'pointer' }}>✕</button>
+            </div>
+            <p style={{ fontSize: '12px', color: '#94a3b8', margin: '0 0 6px' }}>User: {user?.email || 'Guest'}</p>
+            <p style={{ fontSize: '12px', color: '#94a3b8', margin: '0 0 16px' }}>Theme: Dark Luxury (Default)</p>
+            {user && (
+              <button onClick={handleLogout} style={{ width: '100%', background: '#dc2626', color: '#fff', border: 'none', padding: '8px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px' }}>
+                Logout
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
-            }
-            
+    }
+      
