@@ -14,19 +14,87 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   },
 })
 
-// Default backup data agar database slow ho
 const staticBook = {
   id: 'dfb9528e-8466-4c5f-aeab-0329ae420bf1',
   title: 'ZERO SE ARTIST - Part 1',
   author: 'Tiger Soul',
   cover_path: 'https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/covers/1790700033242-teliy6.jpg',
-  file_path: 'https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/ebooks/1790700033242-teliy6.pdf',
 }
+
+const bookHtmlRaw = `<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZERO SE ARTIST - Book 1 | By Tiger Soul</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Cinzel:wght@700;900&family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0B0F17; color: #E2E8F0; }
+    .font-display { font-family: 'Cinzel', serif; }
+    .font-heading { font-family: 'Outfit', sans-serif; }
+    html { scroll-behavior: smooth; }
+  </style>
+</head>
+<body class="selection:bg-amber-500 selection:text-black">
+  <main class="max-w-3xl mx-auto px-5 sm:px-8 py-10">
+    <section class="min-h-[80vh] flex flex-col justify-between p-8 rounded-3xl bg-gradient-to-b from-[#131A2A] via-[#0F172A] to-[#0A0D14] border border-amber-500/30 shadow-2xl relative mb-12 text-center">
+      <div class="my-auto py-8">
+        <p class="text-xs uppercase tracking-[0.3em] text-cyan-400 mb-2">From Zero To Your Own Sound</p>
+        <h1 class="font-display text-4xl sm:text-6xl font-black text-white mb-3">ZERO SE ARTIST</h1>
+        <h2 class="font-heading text-lg sm:text-2xl font-bold text-slate-200 mb-4">ARTIST BANNE KI SHURUAAT</h2>
+        <p class="text-xs text-amber-400 font-bold uppercase tracking-widest">Written by TIGER SOUL</p>
+      </div>
+      <div class="border-t border-slate-800 pt-4 text-xs text-slate-500">
+        Book 1 of Music Creator Series
+      </div>
+    </section>
+
+    <article class="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 text-slate-300 text-sm leading-relaxed mb-8">
+      <h3 class="font-heading text-xl font-bold text-white">Author's Note</h3>
+      <p>Agar tum ye book padh rahe ho, toh shayad tumhare andar bhi ek artist hai. Shuruaat mein expensive studio ya team hona zaroori nahi hai.</p>
+      <p class="text-amber-400 font-bold">"Start where you are, use what you have, learn as you go."</p>
+      <p class="text-right text-xs text-slate-400">— TIGER SOUL</p>
+    </article>
+
+    <article class="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 text-slate-300 text-sm leading-relaxed mb-8">
+      <span class="text-xs text-amber-400 font-bold uppercase">Chapter 01</span>
+      <h3 class="font-heading text-xl font-bold text-white">ARTIST BANNE KA DECISION</h3>
+      <p>Artist banna sirf keh dena nahi hai, ye ek decision hai. Pehle listener se creator bano. Pehle create karo, phir seekho, phir improve karo.</p>
+    </article>
+
+    <article class="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 text-slate-300 text-sm leading-relaxed mb-8">
+      <span class="text-xs text-cyan-400 font-bold uppercase">Chapter 02</span>
+      <h3 class="font-heading text-xl font-bold text-white">TUM ARTIST KYUN BANNA CHAHTE HO?</h3>
+      <p>Apna "Kyun" samjho. Jab views kam aayenge tab tumhara maksad hi tumhe aage badhayega.</p>
+    </article>
+
+    <article class="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 text-slate-300 text-sm leading-relaxed mb-8">
+      <span class="text-xs text-purple-400 font-bold uppercase">Chapter 03</span>
+      <h3 class="font-heading text-xl font-bold text-white">TUMHARI ARTIST IDENTITY KYA HAI?</h3>
+      <p>Kisi aur ka sasta version banne ke bajaye apna original version bano. Identity waqt ke sath build hoti hai.</p>
+    </article>
+
+    <article class="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 text-slate-300 text-sm leading-relaxed mb-8">
+      <span class="text-xs text-emerald-400 font-bold uppercase">Chapter 04 & 05</span>
+      <h3 class="font-heading text-xl font-bold text-white">SONG IDEA AUR LYRICS</h3>
+      <p>Har song finished beat se nahi, chote idea se start hota hai. Lyrics mein kahani aur soul honi chahiye, sirf rhyming nahi.</p>
+    </article>
+
+    <footer class="text-center text-xs text-slate-600 pt-8 border-t border-slate-800">
+      ZERO SE ARTIST • Book 1 • By Tiger Soul
+    </footer>
+  </main>
+</body>
+</html>`
 
 export default function HomePage() {
   const [books, setBooks] = useState<any[]>([staticBook])
   const [user, setUser] = useState<any>(null)
   const [showAuthModal, setShowAuthModal] = useState(false)
+  const [isReading, setIsReading] = useState(false)
   const [isSignUp, setIsSignUp] = useState(false)
   const [showEmailForm, setShowEmailForm] = useState(false)
   const [email, setEmail] = useState('')
@@ -34,7 +102,6 @@ export default function HomePage() {
   const [authError, setAuthError] = useState('')
 
   useEffect(() => {
-    // 1. Session check
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (session?.user) {
@@ -43,7 +110,6 @@ export default function HomePage() {
     }
     checkUser()
 
-    // 2. Auth change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUser(session.user)
@@ -53,7 +119,6 @@ export default function HomePage() {
       }
     })
 
-    // 3. Supabase Database se books lana
     async function fetchBooks() {
       try {
         const { data, error } = await supabase.from('books').select('*')
@@ -100,30 +165,56 @@ export default function HomePage() {
   const handleLogout = async () => {
     await supabase.auth.signOut()
     setUser(null)
+    setIsReading(false)
   }
 
-  // 404 Error Fix: Ab file seedhe Supabase storage se open hogi
-  const handleReadBook = (book: any) => {
+  const handleReadBook = (_book: any) => {
     if (!user) {
       setShowAuthModal(true)
       return
     }
+    setIsReading(true)
+  }
 
-    const file = book.file_path || book.file_url || book.pdf_url
+  // Full Screen In-App Reader View
+  if (isReading) {
+    return (
+      <div style={{ position: 'fixed', inset: 0, backgroundColor: '#0B0F17', zIndex: 9999, display: 'flex', flexDirection: 'column' }}>
+        <header style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '12px 20px',
+          backgroundColor: '#090d16',
+          borderBottom: '1px solid #1e293b'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fff', fontWeight: 'bold', fontSize: '15px' }}>
+            <span>📖</span> ZERO SE ARTIST - Part 1
+          </div>
+          <button
+            onClick={() => setIsReading(false)}
+            style={{
+              backgroundColor: '#dc2626',
+              color: '#fff',
+              border: 'none',
+              padding: '6px 14px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              fontSize: '13px'
+            }}
+          >
+            ✕ Close Reader
+          </button>
+        </header>
 
-    if (file) {
-      // Agar pehle se poora http link hai toh wohi khulega
-      if (file.startsWith('http://') || file.startsWith('https://')) {
-        window.open(file, '_blank')
-      } else {
-        // Agar database me sirf file name hai toh complete Supabase storage URL banakar open hoga
-        const finalUrl = `https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/ebooks/${file}`
-        window.open(finalUrl, '_blank')
-      }
-    } else {
-      // Fallback direct storage link
-      window.open('https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/ebooks/1790700033242-teliy6.pdf', '_blank')
-    }
+        <iframe
+          srcDoc={bookHtmlRaw}
+          style={{ width: '100%', flex: 1, border: 'none' }}
+          title="Zero Se Artist eBook"
+        />
+      </div>
+    )
   }
 
   return (
@@ -336,5 +427,5 @@ export default function HomePage() {
       )}
     </div>
   )
-    }
-        
+  }
+    
