@@ -36,35 +36,14 @@ export default function HomePage() {
   const [authError, setAuthError] = useState('')
 
   useEffect(() => {
-    // 1. अगर URL में Hash (#access_token=...) मौजूद है, तो उसे सीधे प्रोसेस करें
-    if (typeof window !== 'undefined' && window.location.hash.includes('access_token')) {
-      const hashParams = new URLSearchParams(window.location.hash.substring(1))
-      const accessToken = hashParams.get('access_token')
-      const refreshToken = hashParams.get('refresh_token')
-
-      if (accessToken) {
-        supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken || '',
-        }).then(({ data }) => {
-          if (data?.user) {
-            setUser(data.user)
-            setShowAuthModal(false)
-          }
-          // URL साफ़ करें
-          window.history.replaceState(null, '', window.location.pathname)
-        })
-      }
-    }
-
-    // 2. मौजूदा लोकल सेशन चेक करें
+    // 1. Initial Session Check
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser(session.user)
       }
     })
 
-    // 3. Auth स्टेट में बदलाव का लिसनर
+    // 2. Auth State Change Listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUser(session.user)
@@ -74,7 +53,7 @@ export default function HomePage() {
       }
     })
 
-    // 4. Supabase डेटाबेस से किताबें लोड करें
+    // 3. Supabase Database se books fetch karein
     async function fetchBooks() {
       try {
         const { data, error } = await supabase.from('books').select('*')
@@ -90,17 +69,19 @@ export default function HomePage() {
     return () => subscription.unsubscribe()
   }, [])
 
+  // OAuth Login (Google & Facebook) with /auth/callback redirect
   const handleOAuthLogin = async (provider: 'google' | 'facebook') => {
     setAuthError('')
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: typeof window !== 'undefined' ? window.location.origin : 'https://readora-a4-be07.vercel.app',
+        redirectTo: `${window.location.origin}/auth/callback`,
       },
     })
     if (error) setAuthError(error.message)
   }
 
+  // Email Sign In / Sign Up
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault()
     setAuthError('')
@@ -181,7 +162,6 @@ export default function HomePage() {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px' }}>
           {books.map((book) => {
-            // कवर ढूंढने के लिए सभी संभावित फील्ड्स की जांच
             const rawCover = book.cover_url || book.cover_image || book.cover || book.image || book.thumbnail || book.image_url
             return (
               <div key={book.id} style={{ background: '#111827', borderRadius: '14px', padding: '14px', border: '1px solid #1f2937' }}>
@@ -355,5 +335,5 @@ export default function HomePage() {
       )}
     </div>
   )
-  }
-        
+    }
+    
