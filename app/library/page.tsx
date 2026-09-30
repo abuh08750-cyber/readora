@@ -99,7 +99,7 @@ export default function LibraryPage() {
     if (isSignUp) {
       const { error } = await supabase.auth.signUp({ email, password })
       if (error) setAuthError(error.message)
-      else setAuthError('Confirmation email bhej diya gaya hai!')
+      else setAuthError('Confirmation email भेजा गया है!')
     } else {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) setAuthError(error.message)
@@ -169,7 +169,7 @@ export default function LibraryPage() {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#070b14', color: '#f8fafc', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       
-      {/* Left Sidebar */}
+      {/* Sidebar */}
       <aside style={{
         width: '240px',
         background: '#070b14',
@@ -186,10 +186,7 @@ export default function LibraryPage() {
             onClick={() => window.location.href = '/'}
             style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '20px', fontWeight: '800', marginBottom: '32px', paddingLeft: '8px', cursor: 'pointer' }}
           >
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-            </svg>
+            <span>📖</span>
             <span>Readora</span>
           </div>
 
@@ -305,32 +302,29 @@ export default function LibraryPage() {
           </div>
         </header>
 
-        {/* Library Body */}
+        {/* Library Content */}
         <div style={{ padding: '28px 32px 60px', overflowY: 'auto' }}>
           
-          {/* Hero Banner */}
+          {/* Banner */}
           <section style={{
             position: 'relative',
             borderRadius: '20px',
             overflow: 'hidden',
-            padding: '36px 36px',
+            padding: '36px',
             marginBottom: '28px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            backgroundImage: `linear-gradient(to right, #090e1a 40%, rgba(9,14,26,0.8) 60%, rgba(9,14,26,0.3) 100%), url('https://images.unsplash.com/photo-1507842229451-7f01be7ff6ab?w=1600&auto=format&fit=crop&q=80')`,
+            backgroundImage: "linear-gradient(to right, #090e1a 40%, rgba(9,14,26,0.8) 60%, rgba(9,14,26,0.3) 100%), url('https://images.unsplash.com/photo-1507842229451-7f01be7ff6ab?w=1600&auto=format&fit=crop&q=80')",
             backgroundSize: 'cover',
             backgroundPosition: 'right center',
             border: '1px solid rgba(255,255,255,0.06)'
           }}>
             <div>
-              <span style={{ fontSize: '11px', fontWeight: '800', color: '#38bdf8', letterSpacing: '1px', textTransform: 'uppercase' }}>LIBRARY</span>
-              <h1 style={{ fontSize: '32px', fontWeight: '900', margin: '6px 0 10px', letterSpacing: '-0.5px' }}>Your Book Collection</h1>
+              <span style={{ fontSize: '11px', fontWeight: '800', color: '#38bdf8', letterSpacing: '1px' }}>LIBRARY</span>
+              <h1 style={{ fontSize: '32px', fontWeight: '900', margin: '6px 0 10px' }}>Your Book Collection</h1>
               <p style={{ color: '#94a3b8', fontSize: '14px', margin: 0 }}>Explore, read and grow with our curated collection of books.</p>
             </div>
           </section>
 
-          {/* Filter Bar */}
+          {/* Filters */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '14px' }}>
             <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
               {filterCategories.map((cat) => {
@@ -363,7 +357,7 @@ export default function LibraryPage() {
             </div>
           </div>
 
-          {/* Books Grid */}
+          {/* Grid */}
           {loading ? (
             <p style={{ color: '#64748b' }}>Books load ho rahi hain...</p>
           ) : (
@@ -462,6 +456,9 @@ export default function LibraryPage() {
         </div>
       </main>
 
-      {/* Auth Modal */}
+      {/* Auth Modal Popup */}
       {showAuthModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center'
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+          <div style={{ background: '#ffffff', borderRadius: '24px', padding: '30px 24px', width: '100%', maxWidth: '350px', textAlign: 'center', position: 'relative', color: '#0f172a' }}>
+            <button onClick={() => setShowAuthModal(false)} style={{ position: 'absolute', top: '14px', right: '16px', background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}>✕</button>
+            <div style={{ fontS
