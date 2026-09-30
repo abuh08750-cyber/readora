@@ -14,14 +14,13 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   },
 })
 
-// आपकी अपलोड की हुई असली किताब को डिफ़ॉल्ट डेटा के तौर पर सेट किया गया है
 const defaultBooks = [
   {
     id: 'dfb9528e-8466-4c5f-aeab-0329ae420bf1',
     title: 'ZERO SE ARTIST - Part 1',
     author: 'Readora',
     category: 'Music',
-    cover_url: '', // अगर कवर इमेज का कोई सीधा लिंक हो तो यहाँ उद्धरणों में डाल सकते हैं
+    cover_url: '',
     file_url: '',
   },
 ]
@@ -37,11 +36,35 @@ export default function HomePage() {
   const [authError, setAuthError] = useState('')
 
   useEffect(() => {
-    // 1. Session चेक करें
+    // 1. अगर URL में Hash (#access_token=...) मौजूद है, तो उसे सीधे प्रोसेस करें
+    if (typeof window !== 'undefined' && window.location.hash.includes('access_token')) {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1))
+      const accessToken = hashParams.get('access_token')
+      const refreshToken = hashParams.get('refresh_token')
+
+      if (accessToken) {
+        supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken || '',
+        }).then(({ data }) => {
+          if (data?.user) {
+            setUser(data.user)
+            setShowAuthModal(false)
+          }
+          // URL साफ़ करें
+          window.history.replaceState(null, '', window.location.pathname)
+        })
+      }
+    }
+
+    // 2. मौजूदा लोकल सेशन चेक करें
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) setUser(session.user)
+      if (session?.user) {
+        setUser(session.user)
+      }
     })
 
+    // 3. Auth स्टेट में बदलाव का लिसनर
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUser(session.user)
@@ -51,7 +74,7 @@ export default function HomePage() {
       }
     })
 
-    // 2. Supabase डेटाबेस से किताबें लोड करें
+    // 4. Supabase डेटाबेस से किताबें लोड करें
     async function fetchBooks() {
       try {
         const { data, error } = await supabase.from('books').select('*')
@@ -106,11 +129,11 @@ export default function HomePage() {
       return
     }
 
-    const fileUrl = book.file_url || book.pdf_url || book.url
+    const fileUrl = book.file_url || book.pdf_url || book.url || book.file_path
     if (fileUrl) {
       window.open(fileUrl, '_blank')
     } else {
-      alert(`Opening ${book.title}... (PDF link add karne ke liye Supabase me file_url update karein)`)
+      alert(`किताब खुल रही है: ${book.title}`)
     }
   }
 
@@ -118,7 +141,7 @@ export default function HomePage() {
     <div style={{ backgroundColor: '#090d16', color: '#f8fafc', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
       
       {/* Header */}
-      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: '1px solid #1e293b' }}>
+      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid #1e293b' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '20px', fontWeight: 'bold' }}>
           <span>📖</span> Readora
         </div>
@@ -126,13 +149,15 @@ export default function HomePage() {
         <div>
           {user ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '13px', color: '#38bdf8' }}>{user.email?.split('@')[0]}</span>
-              <button onClick={handleLogout} style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>
+              <span style={{ fontSize: '13px', color: '#38bdf8', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {user.email?.split('@')[0]}
+              </span>
+              <button onClick={handleLogout} style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>
                 Logout
               </button>
             </div>
           ) : (
-            <button onClick={() => setShowAuthModal(true)} style={{ background: '#2563eb', color: '#ffffff', border: 'none', padding: '8px 18px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>
+            <button onClick={() => setShowAuthModal(true)} style={{ background: '#2563eb', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>
               Sign In
             </button>
           )}
@@ -140,30 +165,31 @@ export default function HomePage() {
       </header>
 
       {/* Hero Section */}
-      <section style={{ padding: '36px 24px 20px', maxWidth: '600px' }}>
-        <h1 style={{ fontSize: '36px', fontWeight: '800', lineHeight: 1.2, margin: '0 0 10px' }}>
+      <section style={{ padding: '30px 20px 15px', maxWidth: '600px' }}>
+        <h1 style={{ fontSize: '34px', fontWeight: '800', lineHeight: 1.2, margin: '0 0 10px' }}>
           Read More, <br />
           <span style={{ color: '#38bdf8' }}>Grow Further</span>
         </h1>
-        <p style={{ color: '#94a3b8', fontSize: '14px', margin: '0 0 24px' }}>
+        <p style={{ color: '#94a3b8', fontSize: '14px', margin: '0 0 20px' }}>
           Discover amazing books, explore new ideas, and build a better you.
         </p>
       </section>
 
       {/* Books List */}
-      <section style={{ padding: '10px 24px 60px' }}>
+      <section style={{ padding: '10px 20px 60px' }}>
         <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px' }}>Featured Books</h2>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '16px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px' }}>
           {books.map((book) => {
-            const cover = book.cover_url || book.cover_image || book.image_url
+            // कवर ढूंढने के लिए सभी संभावित फील्ड्स की जांच
+            const rawCover = book.cover_url || book.cover_image || book.cover || book.image || book.thumbnail || book.image_url
             return (
               <div key={book.id} style={{ background: '#111827', borderRadius: '14px', padding: '14px', border: '1px solid #1f2937' }}>
                 <div style={{
                   height: '200px',
                   borderRadius: '10px',
                   backgroundColor: '#1e293b',
-                  backgroundImage: cover ? `url(${cover})` : 'linear-gradient(135deg, #1e3a8a, #0f172a)',
+                  backgroundImage: rawCover ? `url(${rawCover})` : 'linear-gradient(135deg, #1e3a8a, #0f172a)',
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
                   display: 'flex',
@@ -174,7 +200,7 @@ export default function HomePage() {
                   textAlign: 'center',
                   marginBottom: '12px'
                 }}>
-                  {!cover && (
+                  {!rawCover && (
                     <>
                       <span style={{ fontSize: '32px', marginBottom: '8px' }}>🎧</span>
                       <span style={{ fontWeight: 'bold', fontSize: '13px', color: '#fff' }}>{book.title}</span>
@@ -199,7 +225,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Complete Auth Popup Modal */}
+      {/* Auth Modal Popup */}
       {showAuthModal && (
         <div style={{
           position: 'fixed',
@@ -222,7 +248,6 @@ export default function HomePage() {
             color: '#0f172a',
             boxShadow: '0 20px 40px rgba(0,0,0,0.4)'
           }}>
-            {/* Close Button */}
             <button 
               onClick={() => setShowAuthModal(false)}
               style={{ position: 'absolute', top: '16px', right: '18px', background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#64748b' }}
@@ -230,7 +255,6 @@ export default function HomePage() {
               ✕
             </button>
 
-            {/* Readora Logo */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '12px' }}>
               <span style={{ fontSize: '24px' }}>📖</span>
               <span style={{ fontSize: '22px', fontWeight: '800' }}>Readora</span>
@@ -243,10 +267,7 @@ export default function HomePage() {
               Sign in to read this book and access your library.
             </p>
 
-            {/* Login Buttons */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              
-              {/* Google */}
               <button onClick={() => handleOAuthLogin('google')} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
                 padding: '11px', borderRadius: '12px', border: '1px solid #e2e8f0',
@@ -261,7 +282,6 @@ export default function HomePage() {
                 Continue with Google
               </button>
 
-              {/* Facebook */}
               <button onClick={() => handleOAuthLogin('facebook')} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
                 padding: '11px', borderRadius: '12px', border: 'none',
@@ -273,7 +293,6 @@ export default function HomePage() {
                 Continue with Facebook
               </button>
 
-              {/* Email */}
               <button onClick={() => setShowEmailForm(!showEmailForm)} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
                 padding: '11px', borderRadius: '12px', border: '1px solid #e2e8f0',
@@ -285,24 +304,8 @@ export default function HomePage() {
                 </svg>
                 Continue with Email
               </button>
-
-              {/* Instagram */}
-              <button onClick={() => alert('Instagram login ke liye Facebook login use karein!')} style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                padding: '11px', borderRadius: '12px', border: 'none',
-                background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
-                color: '#ffffff', fontWeight: '600', fontSize: '14px', cursor: 'pointer'
-              }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2">
-                  <rect width="20" height="20" x="2" y="2" rx="5" ry="5"/>
-                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
-                  <line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/>
-                </svg>
-                Continue with Instagram
-              </button>
             </div>
 
-            {/* Email Form Toggle */}
             {showEmailForm && (
               <form onSubmit={handleEmailAuth} style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <input
@@ -352,5 +355,5 @@ export default function HomePage() {
       )}
     </div>
   )
-    }
+  }
         
