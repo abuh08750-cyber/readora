@@ -14,11 +14,11 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   },
 })
 
-// Aapki book ka direct aur confirmed data
+// Default backup data agar database slow ho
 const staticBook = {
   id: 'dfb9528e-8466-4c5f-aeab-0329ae420bf1',
   title: 'ZERO SE ARTIST - Part 1',
-  author: 'Readora',
+  author: 'Tiger Soul',
   cover_path: 'https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/covers/1790700033242-teliy6.jpg',
   file_path: 'https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/ebooks/1790700033242-teliy6.pdf',
 }
@@ -34,7 +34,7 @@ export default function HomePage() {
   const [authError, setAuthError] = useState('')
 
   useEffect(() => {
-    // Session check
+    // 1. Session check
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (session?.user) {
@@ -43,7 +43,7 @@ export default function HomePage() {
     }
     checkUser()
 
-    // Auth change listener
+    // 2. Auth change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUser(session.user)
@@ -53,11 +53,15 @@ export default function HomePage() {
       }
     })
 
-    // Supabase se books lana (agar DB slow ho toh bhi staticBook hamesha rahegi)
+    // 3. Supabase Database se books lana
     async function fetchBooks() {
-      const { data } = await supabase.from('books').select('*')
-      if (data && data.length > 0) {
-        setBooks(data)
+      try {
+        const { data, error } = await supabase.from('books').select('*')
+        if (!error && data && data.length > 0) {
+          setBooks(data)
+        }
+      } catch (err) {
+        console.error('Fetch error:', err)
       }
     }
     fetchBooks()
@@ -98,6 +102,7 @@ export default function HomePage() {
     setUser(null)
   }
 
+  // 404 Error Fix: Ab file seedhe Supabase storage se open hogi
   const handleReadBook = (book: any) => {
     if (!user) {
       setShowAuthModal(true)
@@ -105,10 +110,19 @@ export default function HomePage() {
     }
 
     const file = book.file_path || book.file_url || book.pdf_url
+
     if (file) {
-      window.open(file, '_blank')
+      // Agar pehle se poora http link hai toh wohi khulega
+      if (file.startsWith('http://') || file.startsWith('https://')) {
+        window.open(file, '_blank')
+      } else {
+        // Agar database me sirf file name hai toh complete Supabase storage URL banakar open hoga
+        const finalUrl = `https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/ebooks/${file}`
+        window.open(finalUrl, '_blank')
+      }
     } else {
-      alert(`Book open ho rahi hai: ${book.title}`)
+      // Fallback direct storage link
+      window.open('https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/ebooks/1790700033242-teliy6.pdf', '_blank')
     }
   }
 
@@ -156,7 +170,11 @@ export default function HomePage() {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px' }}>
           {books.map((book) => {
-            const cover = book.cover_path || book.cover_url || staticBook.cover_path
+            const rawCover = book.cover_path || book.cover_url || staticBook.cover_path
+            const cover = (rawCover && (rawCover.startsWith('http://') || rawCover.startsWith('https://')))
+              ? rawCover 
+              : `https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/covers/${rawCover}`
+
             return (
               <div key={book.id || 'default-book'} style={{ background: '#111827', borderRadius: '14px', padding: '14px', border: '1px solid #1f2937' }}>
                 <div style={{
@@ -174,7 +192,7 @@ export default function HomePage() {
                   {book.title}
                 </h4>
                 <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 12px' }}>
-                  {book.author || 'Readora'}
+                  {book.author || 'Tiger Soul'}
                 </p>
                 <button 
                   onClick={() => handleReadBook(book)} 
@@ -319,4 +337,4 @@ export default function HomePage() {
     </div>
   )
     }
-      
+        
