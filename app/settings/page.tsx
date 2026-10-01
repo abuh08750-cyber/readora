@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 import ProfilePhotoUploader from '@/components/ProfilePhotoUploader'
 import NotificationDropdown from '@/components/NotificationDropdown'
 import ChangePasswordModal from '@/components/ChangePasswordModal'
+import HelpCenterModal from '@/components/HelpCenterModal'
 
 const SUPABASE_URL = 'https://stuabcdisgmmxprapfai.supabase.co'
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0dWFiY2Rpc2dtbXhwcmFwZmFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1Njc1NjksImV4cCI6MjEwNjE0MzU2OX0.pGvaQQBWGcbDKgDb_9F1jkUURVXH3bhJ-trQt-GXBZ8'
@@ -62,6 +63,7 @@ export default function SettingsPage() {
 
   // Modal Open States
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false)
+  const [isHelpCenterOpen, setIsHelpCenterOpen] = useState(false)
   const [isRecoveryFlow, setIsRecoveryFlow] = useState(false)
   const [activeModal, setActiveModal] = useState<'none' | '2fa' | 'activity'>('none')
   const [is2FAEnabled, setIs2FAEnabled] = useState(false)
@@ -820,14 +822,14 @@ export default function SettingsPage() {
               <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Get help and contact our team.</p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div onClick={() => alert('Readora Help Center: Reach us at support@readora.app')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
-                  <div>
-                    <b style={{ fontSize: '12px', display: 'block' }}>Help Center</b>
-                    <span style={{ fontSize: '10px', color: styles.muted }}>Find answers to common questions</span>
-                  </div>
-                  <span style={{ color: styles.muted }}>›</span>
-                </div>
-
+                <div onClick={() => setIsHelpCenterOpen(true)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+  <div>
+    <b style={{ fontSize: '12px', display: 'block' }}>Help Center</b>
+    <span style={{ fontSize: '10px', color: styles.muted }}>Find answers to common questions</span>
+  </div>
+  <span style={{ color: styles.accent, fontWeight: 'bold' }}>›</span>
+</div>
+                
                 <div onClick={() => window.open('mailto:support@readora.app')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                   <div>
                     <b style={{ fontSize: '12px', display: 'block' }}>Contact Us</b>
@@ -866,7 +868,13 @@ export default function SettingsPage() {
         userEmail={user?.email || emailVal}
         isRecoveryMode={isRecoveryFlow}
       />
-
+{/* Help Center Modal Component */}
+<HelpCenterModal
+  isOpen={isHelpCenterOpen}
+  onClose={() => setIsHelpCenterOpen(false)}
+  userEmail={user?.email || emailVal}
+/>
+      
       {/* POPUP MODAL: Two-Factor Authentication (2FA) */}
       {activeModal === '2fa' && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
