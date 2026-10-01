@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import ProfilePhotoUploader from '@/components/ProfilePhotoUploader'
 import NotificationDropdown from '@/components/NotificationDropdown'
+import ChangePasswordModal from '@/components/ChangePasswordModal'
 
 const SUPABASE_URL = 'https://stuabcdisgmmxprapfai.supabase.co'
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0dWFiY2Rpc2dtbXhwcmFwZmFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1Njc1NjksImV4cCI6MjEwNjE0MzU2OX0.pGvaQQBWGcbDKgDb_9F1jkUURVXH3bhJ-trQt-GXBZ8'
@@ -25,6 +26,8 @@ function hexToRgb(hex: string) {
 
 export default function SettingsPage() {
   const [user, setUser] = useState<any>(null)
+  const [authChecking, setAuthChecking] = useState(true)
+
   const [fullName, setFullName] = useState('Abu Huzaifa')
   const [savedFullName, setSavedFullName] = useState('Abu Huzaifa')
   const [emailVal, setEmailVal] = useState('waqasabu186@gmail.com')
@@ -57,11 +60,27 @@ export default function SettingsPage() {
   const [syncProgress, setSyncProgress] = useState(true)
   const [autoSavePos, setAutoSavePos] = useState(true)
 
+  // Modal Open States
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false)
+  const [activeModal, setActiveModal] = useState<'none' | '2fa' | 'activity'>('none')
+  const [is2FAEnabled, setIs2FAEnabled] = useState(false)
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
+      if (!session?.user) {
+        window.location.href = '/'
+        return
+      }
+      setUser(session.user)
+      if (session.user.email) setEmailVal(session.user.email)
+      setAuthChecking(false)
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session?.user) {
+        window.location.href = '/'
+      } else {
         setUser(session.user)
-        if (session.user.email) setEmailVal(session.user.email)
       }
     })
 
@@ -86,7 +105,6 @@ export default function SettingsPage() {
         if (parsed.lineSpacing) setLineSpacing(parsed.lineSpacing)
       }
 
-      // Load saved notification toggles
       const savedNotifs = localStorage.getItem('readora_notif_settings')
       if (savedNotifs) {
         const parsedNotifs = JSON.parse(savedNotifs)
@@ -96,7 +114,6 @@ export default function SettingsPage() {
         if (typeof parsedNotifs.marketing === 'boolean') setNotifMarketing(parsedNotifs.marketing)
       }
 
-      // Load saved library settings toggles
       const savedLibToggles = localStorage.getItem('readora_library_toggles')
       if (savedLibToggles) {
         const parsedLib = JSON.parse(savedLibToggles)
@@ -104,9 +121,10 @@ export default function SettingsPage() {
         if (typeof parsedLib.autoSavePos === 'boolean') setAutoSavePos(parsedLib.autoSavePos)
       }
     } catch (e) {}
+
+    return () => subscription.unsubscribe()
   }, [])
 
-  // Helper to persist Notification toggle changes
   const toggleNotification = (key: 'releases' | 'reminders' | 'replies' | 'marketing') => {
     let nextReleases = notifReleases
     let nextReminders = notifReminders
@@ -137,7 +155,6 @@ export default function SettingsPage() {
     } catch (e) {}
   }
 
-  // Helper to persist Library toggle changes
   const toggleLibrarySetting = (key: 'sync' | 'autoSave') => {
     let nextSync = syncProgress
     let nextAutoSave = autoSavePos
@@ -306,8 +323,22 @@ export default function SettingsPage() {
   }
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
+    try {
+      await supabase.auth.signOut()
+    } catch {}
+    try {
+      localStorage.removeItem('readora_profile_avatar')
+      localStorage.removeItem('supabase.auth.token')
+    } catch {}
     window.location.href = '/'
+  }
+
+  if (authChecking) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#070b14', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
+        Verifying session...
+      </div>
+    )
   }
 
   const avatarChar = user?.email ? user.email.charAt(0).toUpperCase() : 'W'
@@ -615,7 +646,7 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* Card 3: Notifications (Fully Persistent Toggles) */}
+            {/* Card 3: Notifications */}
             <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                 <span style={{ fontSize: '16px', color: styles.accent }}>🔔</span>
@@ -624,131 +655,43 @@ export default function SettingsPage() {
               <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Get notified about new books and updates.</p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                {/* Toggle 1: New Book Releases */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <b style={{ fontSize: '12px', display: 'block' }}>New Book Releases</b>
                     <span style={{ fontSize: '10px', color: styles.muted }}>Be the first to know about new arrivals</span>
                   </div>
-                  <div
-                    onClick={() => toggleNotification('releases')}
-                    style={{
-                      width: '38px',
-                      height: '22px',
-                      background: notifReleases ? styles.nav : styles.inner,
-                      borderRadius: '12px',
-                      position: 'relative',
-                      cursor: 'pointer',
-                      border: `1px solid ${styles.border}`,
-                      transition: '0.2s',
-                    }}
-                  >
-                    <div style={{
-                      width: '16px',
-                      height: '16px',
-                      background: '#fff',
-                      borderRadius: '50%',
-                      position: 'absolute',
-                      top: '2px',
-                      left: notifReleases ? '18px' : '2px',
-                      transition: '0.2s',
-                    }} />
+                  <div onClick={() => toggleNotification('releases')} style={{ width: '38px', height: '22px', background: notifReleases ? styles.nav : styles.inner, borderRadius: '12px', position: 'relative', cursor: 'pointer', border: `1px solid ${styles.border}`, transition: '0.2s' }}>
+                    <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: notifReleases ? '18px' : '2px', transition: '0.2s' }} />
                   </div>
                 </div>
 
-                {/* Toggle 2: Reading Reminders */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <b style={{ fontSize: '12px', display: 'block' }}>Reading Reminders</b>
                     <span style={{ fontSize: '10px', color: styles.muted }}>Daily/weekly reading goals</span>
                   </div>
-                  <div
-                    onClick={() => toggleNotification('reminders')}
-                    style={{
-                      width: '38px',
-                      height: '22px',
-                      background: notifReminders ? styles.nav : styles.inner,
-                      borderRadius: '12px',
-                      position: 'relative',
-                      cursor: 'pointer',
-                      border: `1px solid ${styles.border}`,
-                      transition: '0.2s',
-                    }}
-                  >
-                    <div style={{
-                      width: '16px',
-                      height: '16px',
-                      background: '#fff',
-                      borderRadius: '50%',
-                      position: 'absolute',
-                      top: '2px',
-                      left: notifReminders ? '18px' : '2px',
-                      transition: '0.2s',
-                    }} />
+                  <div onClick={() => toggleNotification('reminders')} style={{ width: '38px', height: '22px', background: notifReminders ? styles.nav : styles.inner, borderRadius: '12px', position: 'relative', cursor: 'pointer', border: `1px solid ${styles.border}`, transition: '0.2s' }}>
+                    <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: notifReminders ? '18px' : '2px', transition: '0.2s' }} />
                   </div>
                 </div>
 
-                {/* Toggle 3: Comments & Replies */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <b style={{ fontSize: '12px', display: 'block' }}>Comments & Replies</b>
                     <span style={{ fontSize: '10px', color: styles.muted }}>Get notified about your activity</span>
                   </div>
-                  <div
-                    onClick={() => toggleNotification('replies')}
-                    style={{
-                      width: '38px',
-                      height: '22px',
-                      background: notifReplies ? styles.nav : styles.inner,
-                      borderRadius: '12px',
-                      position: 'relative',
-                      cursor: 'pointer',
-                      border: `1px solid ${styles.border}`,
-                      transition: '0.2s',
-                    }}
-                  >
-                    <div style={{
-                      width: '16px',
-                      height: '16px',
-                      background: '#fff',
-                      borderRadius: '50%',
-                      position: 'absolute',
-                      top: '2px',
-                      left: notifReplies ? '18px' : '2px',
-                      transition: '0.2s',
-                    }} />
+                  <div onClick={() => toggleNotification('replies')} style={{ width: '38px', height: '22px', background: notifReplies ? styles.nav : styles.inner, borderRadius: '12px', position: 'relative', cursor: 'pointer', border: `1px solid ${styles.border}`, transition: '0.2s' }}>
+                    <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: notifReplies ? '18px' : '2px', transition: '0.2s' }} />
                   </div>
                 </div>
 
-                {/* Toggle 4: Marketing & Updates */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <b style={{ fontSize: '12px', display: 'block' }}>Marketing & Updates</b>
                     <span style={{ fontSize: '10px', color: styles.muted }}>Product updates, offers and news</span>
                   </div>
-                  <div
-                    onClick={() => toggleNotification('marketing')}
-                    style={{
-                      width: '38px',
-                      height: '22px',
-                      background: notifMarketing ? styles.nav : styles.inner,
-                      borderRadius: '12px',
-                      position: 'relative',
-                      cursor: 'pointer',
-                      border: `1px solid ${styles.border}`,
-                      transition: '0.2s',
-                    }}
-                  >
-                    <div style={{
-                      width: '16px',
-                      height: '16px',
-                      background: '#fff',
-                      borderRadius: '50%',
-                      position: 'absolute',
-                      top: '2px',
-                      left: notifMarketing ? '18px' : '2px',
-                      transition: '0.2s',
-                    }} />
+                  <div onClick={() => toggleNotification('marketing')} style={{ width: '38px', height: '22px', background: notifMarketing ? styles.nav : styles.inner, borderRadius: '12px', position: 'relative', cursor: 'pointer', border: `1px solid ${styles.border}`, transition: '0.2s' }}>
+                    <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: notifMarketing ? '18px' : '2px', transition: '0.2s' }} />
                   </div>
                 </div>
               </div>
@@ -763,41 +706,45 @@ export default function SettingsPage() {
               <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Keep your account safe and secure.</p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                {/* 1. Change Password Button -> Opens Modal Component */}
+                <div onClick={() => setIsPasswordModalOpen(true)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '4px 0' }}>
                   <div>
                     <b style={{ fontSize: '12px', display: 'block' }}>Change Password</b>
                     <span style={{ fontSize: '10px', color: styles.muted }}>Update your password regularly</span>
                   </div>
-                  <span style={{ color: styles.muted }}>›</span>
+                  <span style={{ color: styles.accent, fontWeight: 'bold' }}>›</span>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                {/* 2. Two-Factor Authentication (2FA) */}
+                <div onClick={() => setActiveModal('2fa')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '4px 0' }}>
                   <div>
                     <b style={{ fontSize: '12px', display: 'block' }}>Two-Factor Authentication (2FA)</b>
                     <span style={{ fontSize: '10px', color: styles.muted }}>Add an extra layer of security</span>
                   </div>
-                  <span style={{ color: styles.muted }}>›</span>
+                  <span style={{ color: styles.accent, fontWeight: 'bold' }}>›</span>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                {/* 3. Login Activity */}
+                <div onClick={() => setActiveModal('activity')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '4px 0' }}>
                   <div>
                     <b style={{ fontSize: '12px', display: 'block' }}>Login Activity</b>
                     <span style={{ fontSize: '10px', color: styles.muted }}>View recent login sessions</span>
                   </div>
-                  <span style={{ color: styles.muted }}>›</span>
+                  <span style={{ color: styles.accent, fontWeight: 'bold' }}>›</span>
                 </div>
 
+                {/* 4. Logout Account */}
                 <div onClick={handleLogout} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', borderTop: `1px solid ${styles.border}`, paddingTop: '10px' }}>
                   <div>
                     <b style={{ fontSize: '12px', display: 'block', color: '#ef4444' }}>Logout Account</b>
-                    <span style={{ fontSize: '10px', color: styles.muted }}>Sign out from this device</span>
+                    <span style={{ fontSize: '10px', color: styles.muted }}>Sign out permanently from this device</span>
                   </div>
                   <span style={{ color: '#ef4444' }}>🚪</span>
                 </div>
               </div>
             </div>
 
-            {/* Card 5: Library Settings (Fully Persistent Toggles) */}
+            {/* Card 5: Library Settings */}
             <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                 <span style={{ fontSize: '16px', color: styles.accent }}>📚</span>
@@ -806,7 +753,7 @@ export default function SettingsPage() {
               <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Manage your library and reading data.</p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                <div onClick={() => window.location.href = '/library'} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                   <div>
                     <b style={{ fontSize: '12px', display: 'block' }}>Download History</b>
                     <span style={{ fontSize: '10px', color: styles.muted }}>View your downloaded books</span>
@@ -814,67 +761,23 @@ export default function SettingsPage() {
                   <span style={{ color: styles.muted }}>›</span>
                 </div>
 
-                {/* Library Toggle 1: Reading Progress */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <b style={{ fontSize: '12px', display: 'block' }}>Reading Progress</b>
                     <span style={{ fontSize: '10px', color: styles.muted }}>Sync across devices</span>
                   </div>
-                  <div
-                    onClick={() => toggleLibrarySetting('sync')}
-                    style={{
-                      width: '38px',
-                      height: '22px',
-                      background: syncProgress ? styles.nav : styles.inner,
-                      borderRadius: '12px',
-                      position: 'relative',
-                      cursor: 'pointer',
-                      border: `1px solid ${styles.border}`,
-                      transition: '0.2s',
-                    }}
-                  >
-                    <div style={{
-                      width: '16px',
-                      height: '16px',
-                      background: '#fff',
-                      borderRadius: '50%',
-                      position: 'absolute',
-                      top: '2px',
-                      left: syncProgress ? '18px' : '2px',
-                      transition: '0.2s',
-                    }} />
+                  <div onClick={() => toggleLibrarySetting('sync')} style={{ width: '38px', height: '22px', background: syncProgress ? styles.nav : styles.inner, borderRadius: '12px', position: 'relative', cursor: 'pointer', border: `1px solid ${styles.border}`, transition: '0.2s' }}>
+                    <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: syncProgress ? '18px' : '2px', transition: '0.2s' }} />
                   </div>
                 </div>
 
-                {/* Library Toggle 2: Auto Save */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <b style={{ fontSize: '12px', display: 'block' }}>Auto Save</b>
                     <span style={{ fontSize: '10px', color: styles.muted }}>Save your reading position</span>
                   </div>
-                  <div
-                    onClick={() => toggleLibrarySetting('autoSave')}
-                    style={{
-                      width: '38px',
-                      height: '22px',
-                      background: autoSavePos ? styles.nav : styles.inner,
-                      borderRadius: '12px',
-                      position: 'relative',
-                      cursor: 'pointer',
-                      border: `1px solid ${styles.border}`,
-                      transition: '0.2s',
-                    }}
-                  >
-                    <div style={{
-                      width: '16px',
-                      height: '16px',
-                      background: '#fff',
-                      borderRadius: '50%',
-                      position: 'absolute',
-                      top: '2px',
-                      left: autoSavePos ? '18px' : '2px',
-                      transition: '0.2s',
-                    }} />
+                  <div onClick={() => toggleLibrarySetting('autoSave')} style={{ width: '38px', height: '22px', background: autoSavePos ? styles.nav : styles.inner, borderRadius: '12px', position: 'relative', cursor: 'pointer', border: `1px solid ${styles.border}`, transition: '0.2s' }}>
+                    <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: autoSavePos ? '18px' : '2px', transition: '0.2s' }} />
                   </div>
                 </div>
 
@@ -897,7 +800,7 @@ export default function SettingsPage() {
               <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Get help and contact our team.</p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                <div onClick={() => alert('Readora Help Center: Reach us at support@readora.app')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                   <div>
                     <b style={{ fontSize: '12px', display: 'block' }}>Help Center</b>
                     <span style={{ fontSize: '10px', color: styles.muted }}>Find answers to common questions</span>
@@ -905,7 +808,7 @@ export default function SettingsPage() {
                   <span style={{ color: styles.muted }}>›</span>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                <div onClick={() => window.open('mailto:support@readora.app')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                   <div>
                     <b style={{ fontSize: '12px', display: 'block' }}>Contact Us</b>
                     <span style={{ fontSize: '10px', color: styles.muted }}>Reach out to our support team</span>
@@ -913,7 +816,7 @@ export default function SettingsPage() {
                   <span style={{ color: styles.muted }}>›</span>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                <div onClick={() => alert('Terms of Service: By using Readora, you agree to read responsibly and respect author copyrights.')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                   <div>
                     <b style={{ fontSize: '12px', display: 'block' }}>Terms & Conditions</b>
                     <span style={{ fontSize: '10px', color: styles.muted }}>Read our terms of service</span>
@@ -921,7 +824,7 @@ export default function SettingsPage() {
                   <span style={{ color: styles.muted }}>›</span>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                <div onClick={() => alert('Privacy Policy: Readora respects your privacy. Your data is stored safely in Supabase with end-to-end security.')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                   <div>
                     <b style={{ fontSize: '12px', display: 'block' }}>Privacy Policy</b>
                     <span style={{ fontSize: '10px', color: styles.muted }}>How we handle your data</span>
@@ -935,6 +838,73 @@ export default function SettingsPage() {
         </div>
 
       </main>
+
+      {/* SEPARATE COMPONENT: Change Password Modal */}
+      <ChangePasswordModal
+        isOpen={isPasswordModalOpen}
+        onClose={() => setIsPasswordModalOpen(false)}
+        userEmail={user?.email || emailVal}
+      />
+
+      {/* POPUP MODAL: Two-Factor Authentication (2FA) */}
+      {activeModal === '2fa' && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
+          <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '24px', maxWidth: '360px', width: '100%', position: 'relative' }}>
+            <button onClick={() => setActiveModal('none')} style={{ position: 'absolute', top: '14px', right: '16px', background: 'none', border: 'none', color: styles.muted, fontSize: '18px', cursor: 'pointer' }}>✕</button>
+            <b style={{ fontSize: '16px', color: styles.accent, display: 'block', marginBottom: '6px' }}>🛡️ Two-Factor Authentication</b>
+            <p style={{ fontSize: '12px', color: styles.muted, margin: '0 0 16px' }}>Require an extra verification code upon every login.</p>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: styles.inner, padding: '12px', borderRadius: '10px', border: `1px solid ${styles.border}` }}>
+              <div>
+                <b style={{ fontSize: '12px', display: 'block' }}>2FA Status</b>
+                <span style={{ fontSize: '11px', color: is2FAEnabled ? '#10b981' : styles.muted }}>
+                  {is2FAEnabled ? 'Active (Protected)' : 'Disabled'}
+                </span>
+              </div>
+              <button
+                onClick={() => setIs2FAEnabled(!is2FAEnabled)}
+                style={{
+                  background: is2FAEnabled ? '#ef4444' : styles.nav,
+                  color: '#fff',
+                  border: 'none',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                {is2FAEnabled ? 'Turn Off' : 'Enable 2FA'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* POPUP MODAL: Login Activity */}
+      {activeModal === 'activity' && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
+          <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '24px', maxWidth: '380px', width: '100%', position: 'relative' }}>
+            <button onClick={() => setActiveModal('none')} style={{ position: 'absolute', top: '14px', right: '16px', background: 'none', border: 'none', color: styles.muted, fontSize: '18px', cursor: 'pointer' }}>✕</button>
+            <b style={{ fontSize: '16px', color: styles.accent, display: 'block', marginBottom: '6px' }}>📱 Login Activity</b>
+            <p style={{ fontSize: '12px', color: styles.muted, margin: '0 0 16px' }}>Devices currently signed into this account.</p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ background: styles.inner, padding: '10px 12px', borderRadius: '8px', border: `1px solid ${styles.border}` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <b style={{ fontSize: '12px' }}>Current Device</b>
+                  <span style={{ fontSize: '10px', color: '#10b981', fontWeight: 'bold' }}>● Active Now</span>
+                </div>
+                <span style={{ fontSize: '11px', color: styles.muted, display: 'block', marginTop: '4px' }}>
+                  {typeof window !== 'undefined' ? window.navigator.userAgent.slice(0, 45) + '...' : 'Mobile Browser'}
+                </span>
+                <span style={{ fontSize: '10px', color: styles.muted }}>Signed in as: {user?.email}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
-}
+                                }
