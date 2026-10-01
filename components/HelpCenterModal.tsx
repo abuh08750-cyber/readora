@@ -1,6 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import { createClient } from '@supabase/supabase-js'
+
+const SUPABASE_URL = 'https://stuabcdisgmmxprapfai.supabase.co'
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0dWFiY2Rpc2dtbXhwcmFwZmFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1Njc1NjksImV4cCI6MjEwNjE0MzU2OX0.pGvaQQBWGcbDKgDb_9F1jkUURVXH3bhJ-trQt-GXBZ8'
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
 
 interface HelpCenterModalProps {
   isOpen: boolean
@@ -98,14 +104,18 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
   const [viewingArticle, setViewingArticle] = useState<Article | null>(null)
   const [viewingSupportForm, setViewingSupportForm] = useState(false)
 
+  // Feedback State
   const [feedbackGiven, setFeedbackGiven] = useState<'yes' | 'no' | null>(null)
   const [feedbackText, setFeedbackText] = useState('')
   const [feedbackSent, setFeedbackSent] = useState(false)
 
+  // Support Form State
   const [supportSubject, setSupportSubject] = useState('')
   const [supportEmail, setSupportEmail] = useState(userEmail || '')
   const [supportMessage, setSupportMessage] = useState('')
+  const [supportLoading, setSupportLoading] = useState(false)
   const [supportSubmitted, setSupportSubmitted] = useState(false)
+  const [supportError, setSupportError] = useState('')
 
   if (!isOpen) return null
 
@@ -117,6 +127,7 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
     setFeedbackGiven(null)
     setFeedbackSent(false)
     setSupportSubmitted(false)
+    setSupportError('')
     onClose()
   }
 
@@ -127,15 +138,42 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
     return matchesSearch && matchesCat
   })
 
-  const handleSupportSubmit = (e: React.FormEvent) => {
+  // Submit Handler: Purely Supabase support_tickets
+  const handleSupportSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSupportSubmitted(true)
-    setTimeout(() => {
-      setViewingSupportForm(false)
-      setSupportSubmitted(false)
-      setSupportSubject('')
-      setSupportMessage('')
-    }, 2000)
+    setSupportError('')
+    setSupportLoading(true)
+
+    try {
+      const { error: dbError } = await supabase.from('support_tickets').insert([
+        {
+          user_email: supportEmail || userEmail || 'unknown@readora.app',
+          subject: supportSubject,
+          message: supportMessage,
+          status: 'open',
+        }
+      ])
+
+      if (dbError) throw dbError
+
+      setSupportSubmitted(true)
+      setTimeout(() => {
+        setViewingSupportForm(false)
+        setSupportSubmitted(false)
+        setSupportSubject('')
+        setSupportMessage('')
+      }, 2400)
+    } catch (err: any) {
+      setSupportError(err?.message || 'Failed to submit request. Please try again.')
+    } finally {
+      setSupportLoading(false)
+    }
+      }
+
+  // Direct Gmail Compose Link Action
+  const handleDirectEmail = () => {
+    const mailto = `mailto:readora.support@gmail.com?subject=${encodeURIComponent(supportSubject || 'Readora Support Request')}&body=${encodeURIComponent(supportMessage || '')}`
+    window.open(mailto, '_blank')
   }
 
   return (
@@ -171,6 +209,7 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
           position: 'relative'
         }}
       >
+        {/* Top Right Close Button */}
         <button
           type="button"
           onClick={handleModalClose}
@@ -192,6 +231,7 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
           ✕
         </button>
 
+        {/* View 1: Article Reader */}
         {viewingArticle && (
           <div>
             <button
@@ -217,6 +257,7 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
               </ol>
             </div>
 
+            {/* Helpful Feedback Box */}
             <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '12px', padding: '14px', textAlign: 'center' }}>
               <p style={{ margin: '0 0 10px', fontSize: '12px', color: '#94a3b8' }}>Was this article helpful?</p>
               
@@ -254,6 +295,7 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
           </div>
         )}
 
+        {/* View 2: Contact Support Form */}
         {!viewingArticle && viewingSupportForm && (
           <div>
             <button
@@ -264,20 +306,44 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
               ← Back to Help Center
             </button>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-              <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
-                🎧
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
+                  🎧
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '17px', color: '#fff', fontWeight: '800' }}>Contact Support</h3>
+                  <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#94a3b8' }}>We typically respond within 24 hours.</p>
+                </div>
               </div>
+            </div>
+
+            {/* Direct Gmail Open Action Button */}
+            <div
+              onClick={handleDirectEmail}
+              style={{
+                background: 'rgba(59, 130, 246, 0.12)',
+                border: '1px dashed #38bdf8',
+                borderRadius: '12px',
+                padding: '10px 14px',
+                marginBottom: '16px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
               <div>
-                <h3 style={{ margin: 0, fontSize: '17px', color: '#fff', fontWeight: '800' }}>Contact Support</h3>
-                <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#94a3b8' }}>We typically respond within 24 hours.</p>
+                <b style={{ fontSize: '12px', color: '#38bdf8', display: 'block' }}>✉️ Open in Gmail App</b>
+                <span style={{ fontSize: '11px', color: '#94a3b8' }}>Tap to send directly to readora.support@gmail.com</span>
               </div>
+              <span style={{ color: '#38bdf8', fontSize: '13px', fontWeight: 'bold' }}>Compose ›</span>
             </div>
 
             {supportSubmitted ? (
               <div style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#10b981', padding: '16px', borderRadius: '12px', textAlign: 'center', margin: '20px 0' }}>
                 <b style={{ fontSize: '14px', display: 'block', marginBottom: '4px' }}>✅ Request Submitted</b>
-                <span style={{ fontSize: '12px' }}>Your support request has been submitted successfully. Our team will contact you soon.</span>
+                <span style={{ fontSize: '12px' }}>Your support request has been securely recorded. Our team will review it shortly.</span>
               </div>
             ) : (
               <form onSubmit={handleSupportSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -316,6 +382,12 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
                   />
                 </div>
 
+                {supportError && (
+                  <div style={{ color: '#ef4444', fontSize: '11px', background: 'rgba(239, 68, 68, 0.12)', padding: '8px', borderRadius: '6px' }}>
+                    ⚠️ {supportError}
+                  </div>
+                )}
+
                 <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
                   <button
                     type="button"
@@ -326,9 +398,10 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
                   </button>
                   <button
                     type="submit"
-                    style={{ flex: 1.3, background: '#2563eb', color: '#fff', border: 'none', padding: '10px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+                    disabled={supportLoading}
+                    style={{ flex: 1.3, background: '#2563eb', color: '#fff', border: 'none', padding: '10px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: supportLoading ? 'not-allowed' : 'pointer', opacity: supportLoading ? 0.7 : 1 }}
                   >
-                    Submit Request
+                    {supportLoading ? 'Submitting...' : 'Submit Request'}
                   </button>
                 </div>
               </form>
@@ -336,6 +409,7 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
           </div>
         )}
 
+        {/* View 3: Main Help Center Modal View */}
         {!viewingArticle && !viewingSupportForm && (
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
@@ -452,7 +526,7 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
                 {[
                   { id: 'account', name: 'Account & Profile', icon: '👤' },
                   { id: 'reading', name: 'Books & Reading', icon: '📖' },
-                  { id: 'security', name: 'Security', icon: '🛡️' },
+                  { id: 'security', name: 'Security', icon: '🛡️️' },
                   { id: 'technical', name: 'Technical Issues', icon: '⚙️' }
                 ].map((cat) => (
                   <div
@@ -483,6 +557,7 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
               </div>
             </div>
 
+            {/* Bottom Support Banner */}
             <div style={{
               background: '#0c1324',
               border: '1px solid rgba(59, 130, 246, 0.25)',
