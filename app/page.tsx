@@ -52,12 +52,20 @@ export default function HomePage() {
   const [authError, setAuthError] = useState('')
   const [loading, setLoading] = useState(true)
   const [headerAvatar, setHeaderAvatar] = useState<string | null>(null)
+  const [pendingRedirectToLibrary, setPendingRedirectToLibrary] = useState(false)
 
   // Dynamic Theme
   const [themeMode, setThemeMode] = useState<'Dark' | 'Light' | 'Sepia' | 'Custom'>('Dark')
   const [customColor, setCustomColor] = useState('#6366f1')
 
   useEffect(() => {
+    // Agar library se bina auth ke redirect hokar aaya hai to turant popup open karein
+    if (typeof window !== 'undefined' && window.location.search.includes('auth=required')) {
+      setShowAuthModal(true)
+      setPendingRedirectToLibrary(true)
+      window.history.replaceState({}, '', '/')
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) setUser(session.user)
     })
@@ -66,6 +74,13 @@ export default function HomePage() {
       if (session?.user) {
         setUser(session.user)
         setShowAuthModal(false)
+
+        // Login hone ke baad agar library open karni thi to automatically redirect kar do
+        const shouldGoLibrary = pendingRedirectToLibrary || (typeof window !== 'undefined' && sessionStorage.getItem('readora_pending_library') === 'true')
+        if (shouldGoLibrary) {
+          sessionStorage.removeItem('readora_pending_library')
+          window.location.href = '/library'
+        }
       } else {
         setUser(null)
       }
@@ -107,7 +122,7 @@ export default function HomePage() {
     loadBooks()
 
     return () => subscription.unsubscribe()
-  }, [])
+  }, [pendingRedirectToLibrary])
 
   const styles = (() => {
     if (themeMode === 'Light') {
@@ -163,6 +178,19 @@ export default function HomePage() {
     }
   })()
 
+  // Library button click handler: user login ho toh library jaye, warna popup open kare
+  const handleLibraryClick = () => {
+    if (user) {
+      window.location.href = '/library'
+    } else {
+      setPendingRedirectToLibrary(true)
+      try {
+        sessionStorage.setItem('readora_pending_library', 'true')
+      } catch {}
+      setShowAuthModal(true)
+    }
+  }
+
   const handleOAuth = async (provider: 'google' | 'facebook') => {
     setAuthError('')
     const { error } = await supabase.auth.signInWithOAuth({
@@ -181,16 +209,22 @@ export default function HomePage() {
       else setAuthError('Confirmation email bhej diya gaya hai!')
     } else {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) setAuthError(error.message)
-      else if (data?.user) {
+      if (error) {
+        setAuthError(error.message)
+      } else if (data?.user) {
         setUser(data.user)
         setShowAuthModal(false)
+        if (pendingRedirectToLibrary || sessionStorage.getItem('readora_pending_library') === 'true') {
+          sessionStorage.removeItem('readora_pending_library')
+          window.location.href = '/library'
+        }
       }
     }
   }
 
   const handleRead = async (book: any) => {
     if (!user) {
+      setPendingRedirectToLibrary(false)
       setShowAuthModal(true)
       return
     }
@@ -221,7 +255,8 @@ export default function HomePage() {
     b.author?.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const avatarChar = user?.email ? user.email.charAt(0).toUpperCase() : 'W'
+  const avatarChar = user?.user_metadata?.full_name?.charAt(0)?.toUpperCase() ||
+    user?.email?.charAt(0)?.toUpperCase() || 'R'
 
   if (readingFile && htmlData) {
     return (
@@ -235,7 +270,7 @@ export default function HomePage() {
         <iframe srcDoc={htmlData} style={{ width: '100%', flex: 1, border: 'none' }} title={readingTitle} />
       </div>
     )
-  }
+      }
 
   return (
     <div style={{ backgroundColor: styles.bg, color: styles.text, minHeight: '100vh', width: '100%', overflowX: 'hidden', fontFamily: 'system-ui, -apple-system, sans-serif', transition: 'all 0.25s ease' }}>
@@ -249,7 +284,7 @@ export default function HomePage() {
           </div>
           <nav style={{ display: 'flex', gap: '20px', fontSize: '14px', fontWeight: '500' }}>
             <span style={{ color: styles.text, borderBottom: `2px solid ${styles.nav}`, paddingBottom: '4px', cursor: 'pointer' }} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>Home</span>
-            <span style={{ color: styles.muted, cursor: 'pointer' }} onClick={() => window.location.href = '/library'}>Library</span>
+            <span style={{ color: styles.muted, cursor: 'pointer' }} onClick={handleLibraryClick}>Library</span>
             <span style={{ color: styles.muted, cursor: 'pointer' }} onClick={() => document.getElementById('categories-section')?.scrollIntoView({ behavior: 'smooth' })}>Categories</span>
           </nav>
         </div>
@@ -287,10 +322,10 @@ export default function HomePage() {
             </>
           ) : (
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => setShowAuthModal(true)} style={{ background: 'transparent', color: styles.text, border: `1px solid ${styles.border}`, padding: '6px 14px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
+              <button onClick={() => { setPendingRedirectToLibrary(false); setShowAuthModal(true); }} style={{ background: 'transparent', color: styles.text, border: `1px solid ${styles.border}`, padding: '6px 14px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
                 Sign In
               </button>
-              <button onClick={() => setShowAuthModal(true)} style={{ background: styles.nav, color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
+              <button onClick={() => { setPendingRedirectToLibrary(false); setShowAuthModal(true); }} style={{ background: styles.nav, color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
                 Get Started
               </button>
             </div>
@@ -348,7 +383,7 @@ export default function HomePage() {
             <h2 style={{ fontSize: '20px', fontWeight: '800', margin: '0 0 4px', color: styles.text }}>Featured Books</h2>
             <p style={{ color: styles.muted, fontSize: '12px', margin: 0 }}>Handpicked books just for you</p>
           </div>
-          <span style={{ color: styles.accent, fontSize: '12px', fontWeight: '600', cursor: 'pointer' }} onClick={() => window.location.href = '/library'}>View All ➔</span>
+          <span style={{ color: styles.accent, fontSize: '12px', fontWeight: '600', cursor: 'pointer' }} onClick={handleLibraryClick}>View All ➔</span>
         </div>
 
         {loading ? (
@@ -405,12 +440,12 @@ export default function HomePage() {
             <h2 style={{ fontSize: '18px', fontWeight: '800', margin: '0 0 4px', color: styles.text }}>Browse by Category</h2>
             <p style={{ color: styles.muted, fontSize: '12px', margin: 0 }}>Find books in your favorite category</p>
           </div>
-          <span style={{ color: styles.accent, fontSize: '12px', fontWeight: '600', cursor: 'pointer' }} onClick={() => window.location.href = '/library'}>View All ➔</span>
+          <span style={{ color: styles.accent, fontSize: '12px', fontWeight: '600', cursor: 'pointer' }} onClick={handleLibraryClick}>View All ➔</span>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '12px' }}>
           {categories.map((cat) => (
-            <div key={cat.name} onClick={() => window.location.href = '/library'} style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '12px', padding: '14px 10px', textAlign: 'center', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '12px', fontWeight: '600', color: styles.text }}>
+            <div key={cat.name} onClick={handleLibraryClick} style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '12px', padding: '14px 10px', textAlign: 'center', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '12px', fontWeight: '600', color: styles.text }}>
               <span>{cat.icon}</span>
               <span>{cat.name}</span>
             </div>
@@ -422,10 +457,10 @@ export default function HomePage() {
       {showAuthModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
           <div style={{ background: '#ffffff', borderRadius: '24px', padding: '30px 24px', width: '100%', maxWidth: '350px', textAlign: 'center', position: 'relative', color: '#0f172a' }}>
-            <button onClick={() => setShowAuthModal(false)} style={{ position: 'absolute', top: '14px', right: '16px', background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}>✕</button>
+            <button onClick={() => { setShowAuthModal(false); setPendingRedirectToLibrary(false); }} style={{ position: 'absolute', top: '14px', right: '16px', background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}>✕</button>
             <div style={{ fontSize: '22px', marginBottom: '6px' }}>📖 Readora</div>
             <h3 style={{ fontSize: '18px', fontWeight: '700', margin: '0 0 4px' }}>{isSignUp ? 'Create an Account' : 'Welcome Back!'}</h3>
-            <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 18px' }}>Sign in to read this book and access your library.</p>
+            <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 18px' }}>Sign in to read books and access your library.</p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <button onClick={() => handleOAuth('google')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#fff', color: '#0f172a', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>
@@ -462,4 +497,4 @@ export default function HomePage() {
       )}
     </div>
   )
-              }
+                       }
