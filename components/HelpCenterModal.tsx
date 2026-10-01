@@ -24,10 +24,10 @@ const HELP_ARTICLES: Article[] = [
     icon: '🔒',
     content: [
       'Open Settings from the left sidebar navigation.',
-      'Scroll down to the "Privacy & Security" section.',
-      'Tap on "Change Password".',
+      'Scroll down to the Privacy & Security section.',
+      'Tap on Change Password.',
       'Enter your current password and your new secure password.',
-      'Confirm the new password and tap "Update Password".'
+      'Confirm the new password and tap Update Password.'
     ]
   },
   {
@@ -36,8 +36,8 @@ const HELP_ARTICLES: Article[] = [
     category: 'security',
     icon: '🔄',
     content: [
-      'Open the "Change Password" modal from Settings.',
-      'Click on "Forgot password? Use email verification".',
+      'Open the Change Password modal from Settings.',
+      'Click on Forgot password? Use email verification.',
       'Check your registered email inbox for the reset link.',
       'Click the link in the email to open the reset screen.',
       'Enter your new password directly and save.'
@@ -51,9 +51,9 @@ const HELP_ARTICLES: Article[] = [
     content: [
       'Go to the Home or Library page.',
       'Browse or search for any book you want to read.',
-      'Tap the blue "Read Book" or "📖 Read" button on the card.',
+      'Tap the blue Read Book button on the card.',
       'The in-app clean reader will launch instantly.',
-      'Tap "Close" on the top right when you are finished.'
+      'Tap Close on the top right when you are finished.'
     ]
   },
   {
@@ -62,10 +62,10 @@ const HELP_ARTICLES: Article[] = [
     category: 'technical',
     icon: '⚠️',
     content: [
-      'Open Help Center and tap the blue "Contact Support" button.',
+      'Open Help Center and tap the blue Contact Support button.',
       'Enter the subject and describe the issue you are facing.',
       'Optionally attach a screenshot of the error.',
-      'Tap "Submit Request" to reach our 24/7 team.'
+      'Tap Submit Request to reach our 24/7 team.'
     ]
   },
   {
@@ -74,7 +74,7 @@ const HELP_ARTICLES: Article[] = [
     category: 'account',
     icon: '👤',
     content: [
-      'Tap "Sign In" or "Get Started" on the top navigation bar.',
+      'Tap Sign In or Get Started on the top navigation bar.',
       'Choose your preferred method: Google, Facebook, or Email.',
       'Verify your credentials to instantly sync your saved books.'
     ]
@@ -85,9 +85,9 @@ const HELP_ARTICLES: Article[] = [
     category: 'account',
     icon: '🎨',
     content: [
-      'Go to Settings and find the "Reading Preferences" card.',
+      'Go to Settings and find the Reading Preferences card.',
       'Select Dark, Light, or Sepia theme pills.',
-      'Tap "Custom" to pick any background color from the spectrum wheel.'
+      'Tap Custom to pick any background color from the spectrum wheel.'
     ]
   }
 ]
@@ -98,12 +98,10 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
   const [viewingArticle, setViewingArticle] = useState<Article | null>(null)
   const [viewingSupportForm, setViewingSupportForm] = useState(false)
 
-  // Feedback State
   const [feedbackGiven, setFeedbackGiven] = useState<'yes' | 'no' | null>(null)
   const [feedbackText, setFeedbackText] = useState('')
   const [feedbackSent, setFeedbackSent] = useState(false)
 
-  // Support Form State
   const [supportSubject, setSupportSubject] = useState('')
   const [supportEmail, setSupportEmail] = useState(userEmail || '')
   const [supportMessage, setSupportMessage] = useState('')
@@ -122,7 +120,6 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
     onClose()
   }
 
-  // Filtered Articles Logic
   const filteredArticles = HELP_ARTICLES.filter(item => {
     const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.content.some(c => c.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -138,8 +135,8 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
       setSupportSubmitted(false)
       setSupportSubject('')
       setSupportMessage('')
-    }, 2200)
-    }
+    }, 2000)
+  }
 
   return (
     <div
@@ -154,7 +151,7 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
         justifyContent: 'center',
         zIndex: 1000,
         padding: '16px',
-        boxSizing: 'border-box',
+        boxSizing: 'border-box'
       }}
     >
       <div
@@ -171,10 +168,9 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
           maxHeight: '92vh',
           overflowY: 'auto',
           boxSizing: 'border-box',
-          position: 'relative',
+          position: 'relative'
         }}
       >
-        {/* Top Close Button (✕) */}
         <button
           type="button"
           onClick={handleModalClose}
@@ -196,10 +192,10 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
           ✕
         </button>
 
-        {/* --- VIEW: INDIVIDUAL ARTICLE --- */}
-        {viewingArticle ? (
+        {viewingArticle && (
           <div>
             <button
+              type="button"
               onClick={() => { setViewingArticle(null); setFeedbackGiven(null); setFeedbackSent(false); }}
               style={{ background: 'none', border: 'none', color: '#38bdf8', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', padding: 0, marginBottom: '14px', fontWeight: 'bold' }}
             >
@@ -221,16 +217,15 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
               </ol>
             </div>
 
-            {/* Helpful Feedback Box */}
             <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '12px', padding: '14px', textAlign: 'center' }}>
               <p style={{ margin: '0 0 10px', fontSize: '12px', color: '#94a3b8' }}>Was this article helpful?</p>
               
               {!feedbackGiven ? (
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
-                  <button onClick={() => setFeedbackGiven('yes')} style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', cursor: 'pointer', fontWeight: 'bold' }}>
+                  <button type="button" onClick={() => setFeedbackGiven('yes')} style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', cursor: 'pointer', fontWeight: 'bold' }}>
                     👍 Yes
                   </button>
-                  <button onClick={() => setFeedbackGiven('no')} style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', cursor: 'pointer', fontWeight: 'bold' }}>
+                  <button type="button" onClick={() => setFeedbackGiven('no')} style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', cursor: 'pointer', fontWeight: 'bold' }}>
                     👎 No
                   </button>
                 </div>
@@ -246,7 +241,7 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
                         onChange={(e) => setFeedbackText(e.target.value)}
                         style={{ width: '100%', background: '#0d1527', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px', color: '#fff', fontSize: '12px', outline: 'none', boxSizing: 'border-box', minHeight: '60px', marginBottom: '8px' }}
                       />
-                      <button onClick={() => setFeedbackSent(true)} style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>
+                      <button type="button" onClick={() => setFeedbackSent(true)} style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>
                         Submit Feedback
                       </button>
                     </div>
@@ -255,6 +250,23 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
                   )}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {!viewingArticle && viewingSupportForm && (
+          <div>
+            <button
+              type="button"
+              onClick={() => setViewingSupportForm(false)}
+              style={{ background: 'none', border: 'none', color: '#38bdf8', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', padding: 0, marginBottom: '14px', fontWeight: 'bold' }}
+            >
+              ← Back to Help Center
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+              <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
+                🎧
               </div>
               <div>
                 <h3 style={{ margin: 0, fontSize: '17px', color: '#fff', fontWeight: '800' }}>Contact Support</h3>
@@ -304,15 +316,6 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
                   />
                 </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', color: '#cbd5e1', marginBottom: '4px', fontWeight: '600' }}>Attach screenshot (optional)</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    style={{ width: '100%', background: '#0d1527', border: '1px solid rgba(255,255,255,0.09)', borderRadius: '8px', padding: '7px 12px', color: '#94a3b8', fontSize: '11px', outline: 'none', boxSizing: 'border-box' }}
-                  />
-                </div>
-
                 <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
                   <button
                     type="button"
@@ -331,10 +334,10 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
               </form>
             )}
           </div>
-        ) : (
-          /* --- VIEW: MAIN HELP CENTER (Exact Reference Design) --- */
+        )}
+
+        {!viewingArticle && !viewingSupportForm && (
           <div>
-            {/* Header: Blue Circle Headphone Icon + Title */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
               <div style={{
                 width: '42px',
@@ -347,7 +350,7 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
                 fontSize: '20px',
                 color: '#fff',
                 flexShrink: 0,
-                boxShadow: '0 4px 12px rgba(37,99,235,0.4)',
+                boxShadow: '0 4px 12px rgba(37,99,235,0.4)'
               }}>
                 🎧
               </div>
@@ -361,7 +364,6 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
               </div>
             </div>
 
-            {/* Search Box */}
             <div style={{ position: 'relative', marginBottom: '20px' }}>
               <span style={{ position: 'absolute', left: '12px', top: '11px', color: '#64748b', fontSize: '14px' }}>🔍</span>
               <input
@@ -378,11 +380,12 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
                   color: '#fff',
                   fontSize: '13px',
                   outline: 'none',
-                  boxSizing: 'border-box',
+                  boxSizing: 'border-box'
                 }}
               />
               {searchQuery && (
                 <button
+                  type="button"
                   onClick={() => setSearchQuery('')}
                   style={{ position: 'absolute', right: '12px', top: '11px', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '13px' }}
                 >
@@ -391,7 +394,6 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
               )}
             </div>
 
-            {/* Popular Help / Search Results List */}
             <div style={{ marginBottom: '22px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                 <b style={{ fontSize: '13px', color: '#e2e8f0', letterSpacing: '-0.2px' }}>
@@ -406,6 +408,7 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
                 <div style={{ background: '#0d1527', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
                   <p style={{ margin: '0 0 10px', fontSize: '12px', color: '#94a3b8' }}>No matching articles found.</p>
                   <button
+                    type="button"
                     onClick={() => setViewingSupportForm(true)}
                     style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '7px 14px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}
                   >
@@ -427,7 +430,7 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         cursor: 'pointer',
-                        transition: '0.2s',
+                        transition: '0.2s'
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -441,7 +444,6 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
               )}
             </div>
 
-            {/* Quick Help (Category Cards Grid) */}
             <div style={{ marginBottom: '22px' }}>
               <b style={{ fontSize: '13px', color: '#e2e8f0', display: 'block', marginBottom: '10px' }}>
                 Quick Help
@@ -451,7 +453,7 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
                   { id: 'account', name: 'Account & Profile', icon: '👤' },
                   { id: 'reading', name: 'Books & Reading', icon: '📖' },
                   { id: 'security', name: 'Security', icon: '🛡️' },
-                  { id: 'technical', name: 'Technical Issues', icon: '⚙️' },
+                  { id: 'technical', name: 'Technical Issues', icon: '⚙️' }
                 ].map((cat) => (
                   <div
                     key={cat.id}
@@ -466,7 +468,7 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
                       justifyContent: 'space-between',
                       minHeight: '74px',
                       cursor: 'pointer',
-                      transition: '0.2s',
+                      transition: '0.2s'
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -481,7 +483,6 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
               </div>
             </div>
 
-            {/* Still need help? Contact Support Banner */}
             <div style={{
               background: '#0c1324',
               border: '1px solid rgba(59, 130, 246, 0.25)',
@@ -527,7 +528,7 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
                   alignItems: 'center',
                   gap: '6px',
                   whiteSpace: 'nowrap',
-                  boxShadow: '0 4px 12px rgba(37,99,235,0.4)',
+                  boxShadow: '0 4px 12px rgba(37,99,235,0.4)'
                 }}
               >
                 <span>✈️</span>
@@ -539,19 +540,4 @@ export default function HelpCenterModal({ isOpen, onClose, userEmail }: HelpCent
       </div>
     </div>
   )
-      }
-            </div>
-          </div>
-        ) : viewingSupportForm ? (
-          /* --- VIEW: CONTACT SUPPORT FORM --- */
-          <div>
-            <button
-              onClick={() => setViewingSupportForm(false)}
-              style={{ background: 'none', border: 'none', color: '#38bdf8', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', padding: 0, marginBottom: '14px', fontWeight: 'bold' }}
-            >
-              ← Back to Help Center
-            </button>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-              <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
-                🎧
+                  }
