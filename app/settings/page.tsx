@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
+import ProfilePhotoUploader from '@/components/ProfilePhotoUploader'
 
 const SUPABASE_URL = 'https://stuabcdisgmmxprapfai.supabase.co'
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0dWFiY2Rpc2dtbXhwcmFwZmFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1Njc1NjksImV4cCI6MjEwNjE0MzU2OX0.pGvaQQBWGcbDKgDb_9F1jkUURVXH3bhJ-trQt-GXBZ8'
@@ -17,6 +18,7 @@ export default function SettingsPage() {
   const [username, setUsername] = useState('abu.huzaifa')
   const [selectedTheme, setSelectedTheme] = useState('Dark')
   const [savedSuccess, setSavedSuccess] = useState(false)
+  const [headerAvatar, setHeaderAvatar] = useState<string | null>(null)
 
   // Toggles
   const [notifReleases, setNotifReleases] = useState(true)
@@ -38,6 +40,11 @@ export default function SettingsPage() {
         }
       }
     })
+
+    try {
+      const savedImg = localStorage.getItem('readora_profile_avatar')
+      if (savedImg) setHeaderAvatar(savedImg)
+    } catch {}
   }, [])
 
   const handleSave = (e: React.FormEvent) => {
@@ -100,8 +107,23 @@ export default function SettingsPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             <span style={{ color: '#94a3b8', cursor: 'pointer', fontSize: '16px' }}>☀️</span>
             <span style={{ color: '#94a3b8', cursor: 'pointer', fontSize: '16px' }}>🔔</span>
-            <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: '#2563eb', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '13px' }}>
-              {avatarChar}
+            <div style={{
+              width: '34px',
+              height: '34px',
+              borderRadius: '50%',
+              background: '#2563eb',
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 'bold',
+              fontSize: '13px',
+              backgroundImage: headerAvatar ? `url(${headerAvatar})` : 'none',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              border: '2px solid rgba(255,255,255,0.2)'
+            }}>
+              {!headerAvatar && avatarChar}
             </div>
           </div>
         </header>
@@ -130,7 +152,7 @@ export default function SettingsPage() {
           {/* 6 Cards Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '18px' }}>
             
-            {/* Card 1: Account Settings */}
+            {/* Card 1: Account Settings (Using our new ProfilePhotoUploader Component) */}
             <div style={{ background: '#0b1120', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                 <span style={{ fontSize: '16px', color: '#38bdf8' }}>👤</span>
@@ -138,15 +160,11 @@ export default function SettingsPage() {
               </div>
               <p style={{ color: '#64748b', fontSize: '11px', margin: '0 0 16px' }}>Update your personal information and account details.</p>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px' }}>
-                <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
-                  👤
-                </div>
-                <div>
-                  <button style={{ background: '#111c33', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 14px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>Change Photo</button>
-                  <span style={{ display: 'block', fontSize: '10px', color: '#64748b', marginTop: '4px' }}>JPG, PNG (max 2MB)</span>
-                </div>
-              </div>
+              {/* Modular Photo Uploader Component */}
+              <ProfilePhotoUploader
+                defaultChar={avatarChar}
+                onPhotoChange={(newPhoto) => setHeaderAvatar(newPhoto)}
+              />
 
               <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div>
