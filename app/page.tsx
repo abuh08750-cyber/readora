@@ -26,6 +26,17 @@ const categories = [
   { name: 'Writing', icon: '✏️' },
 ]
 
+function hexToRgb(hex: string) {
+  let c = (hex || '#6366f1').replace('#', '')
+  if (c.length === 3) c = c.split('').map(x => x + x).join('')
+  const num = parseInt(c, 16) || 0
+  return {
+    r: (num >> 16) & 255,
+    g: (num >> 8) & 255,
+    b: num & 255,
+  }
+}
+
 export default function HomePage() {
   const [books, setBooks] = useState<any[]>([])
   const [user, setUser] = useState<any>(null)
@@ -41,6 +52,10 @@ export default function HomePage() {
   const [authError, setAuthError] = useState('')
   const [loading, setLoading] = useState(true)
   const [headerAvatar, setHeaderAvatar] = useState<string | null>(null)
+
+  // Dynamic Theme
+  const [themeMode, setThemeMode] = useState<'Dark' | 'Light' | 'Sepia' | 'Custom'>('Dark')
+  const [customColor, setCustomColor] = useState('#6366f1')
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -59,6 +74,11 @@ export default function HomePage() {
     try {
       const savedImg = localStorage.getItem('readora_profile_avatar')
       if (savedImg) setHeaderAvatar(savedImg)
+
+      const savedTheme = localStorage.getItem('readora_app_theme') as any
+      if (savedTheme) setThemeMode(savedTheme)
+      const savedColor = localStorage.getItem('readora_custom_color')
+      if (savedColor) setCustomColor(savedColor)
     } catch {}
 
     async function loadBooks() {
@@ -89,6 +109,60 @@ export default function HomePage() {
     return () => subscription.unsubscribe()
   }, [])
 
+  const styles = (() => {
+    if (themeMode === 'Light') {
+      return {
+        bg: '#f8fafc',
+        header: '#ffffff',
+        card: '#ffffff',
+        inner: '#f1f5f9',
+        text: '#0f172a',
+        muted: '#64748b',
+        border: 'rgba(0,0,0,0.1)',
+        nav: '#2563eb',
+        accent: '#2563eb',
+      }
+    }
+    if (themeMode === 'Sepia') {
+      return {
+        bg: '#fbf0d9',
+        header: '#f7e8c8',
+        card: '#fdf6e2',
+        inner: '#faebd0',
+        text: '#5c3d10',
+        muted: '#8c6b39',
+        border: 'rgba(92,61,16,0.15)',
+        nav: '#b45309',
+        accent: '#b45309',
+      }
+    }
+    if (themeMode === 'Custom') {
+      const { r, g, b } = hexToRgb(customColor)
+      return {
+        bg: `radial-gradient(ellipse at top, rgba(${r}, ${g}, ${b}, 0.28) 0%, #06080f 85%)`,
+        header: `rgba(${Math.floor(r * 0.06)}, ${Math.floor(g * 0.06)}, ${Math.floor(b * 0.06)}, 0.95)`,
+        card: `rgba(${Math.floor(r * 0.15 + 10)}, ${Math.floor(g * 0.15 + 14)}, ${Math.floor(b * 0.15 + 24)}, 0.85)`,
+        inner: `rgba(${Math.floor(r * 0.08)}, ${Math.floor(g * 0.08)}, ${Math.floor(b * 0.08)}, 0.9)`,
+        text: '#f8fafc',
+        muted: `rgba(${Math.min(r + 60, 240)}, ${Math.min(g + 60, 240)}, ${Math.min(b + 60, 240)}, 0.85)`,
+        border: `rgba(${r}, ${g}, ${b}, 0.35)`,
+        nav: customColor,
+        accent: customColor,
+      }
+    }
+    return {
+      bg: '#040711',
+      header: '#040711',
+      card: '#0a0f1d',
+      inner: '#070b14',
+      text: '#f8fafc',
+      muted: '#94a3b8',
+      border: 'rgba(255,255,255,0.06)',
+      nav: '#2563eb',
+      accent: '#38bdf8',
+    }
+  })()
+
   const handleOAuth = async (provider: 'google' | 'facebook') => {
     setAuthError('')
     const { error } = await supabase.auth.signInWithOAuth({
@@ -113,7 +187,7 @@ export default function HomePage() {
         setShowAuthModal(false)
       }
     }
-    }
+  }
 
   const handleRead = async (book: any) => {
     if (!user) {
@@ -164,30 +238,26 @@ export default function HomePage() {
   }
 
   return (
-    <div style={{ backgroundColor: '#040711', color: '#f8fafc', minHeight: '100vh', width: '100%', overflowX: 'hidden', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div style={{ backgroundColor: styles.bg, color: styles.text, minHeight: '100vh', width: '100%', overflowX: 'hidden', fontFamily: 'system-ui, -apple-system, sans-serif', transition: 'all 0.25s ease' }}>
       
       {/* Header */}
-      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 28px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#040711', position: 'sticky', top: 0, zIndex: 50 }}>
+      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 28px', borderBottom: `1px solid ${styles.border}`, background: styles.header, position: 'sticky', top: 0, zIndex: 50, transition: 'all 0.25s ease' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '20px', fontWeight: '800', cursor: 'pointer' }} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
             <span>📖</span>
             <span>Readora</span>
           </div>
           <nav style={{ display: 'flex', gap: '20px', fontSize: '14px', fontWeight: '500' }}>
-            <span style={{ color: '#fff', borderBottom: '2px solid #3b82f6', paddingBottom: '4px', cursor: 'pointer' }} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>Home</span>
-            <span style={{ color: '#94a3b8', cursor: 'pointer' }} onClick={() => window.location.href = '/library'}>Library</span>
-            <span style={{ color: '#94a3b8', cursor: 'pointer' }} onClick={() => document.getElementById('categories-section')?.scrollIntoView({ behavior: 'smooth' })}>Categories</span>
+            <span style={{ color: styles.text, borderBottom: `2px solid ${styles.nav}`, paddingBottom: '4px', cursor: 'pointer' }} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>Home</span>
+            <span style={{ color: styles.muted, cursor: 'pointer' }} onClick={() => window.location.href = '/library'}>Library</span>
+            <span style={{ color: styles.muted, cursor: 'pointer' }} onClick={() => document.getElementById('categories-section')?.scrollIntoView({ behavior: 'smooth' })}>Categories</span>
           </nav>
         </div>
 
-        {/* Right Nav: Notifications & Profile */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           {user ? (
             <>
-              {/* Notification Dropdown Component */}
               <NotificationDropdown />
-
-              {/* Profile Avatar -> Settings */}
               <button
                 type="button"
                 onClick={() => window.location.href = '/settings'}
@@ -195,9 +265,9 @@ export default function HomePage() {
                   width: '34px',
                   height: '34px',
                   borderRadius: '50%',
-                  background: '#2563eb',
+                  background: styles.nav,
                   color: '#ffffff',
-                  border: '2px solid rgba(255,255,255,0.25)',
+                  border: `2px solid ${styles.border}`,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -205,7 +275,7 @@ export default function HomePage() {
                   fontSize: '13px',
                   cursor: 'pointer',
                   outline: 'none',
-                  boxShadow: '0 2px 8px rgba(37,99,235,0.4)',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
                   backgroundImage: headerAvatar ? `url(${headerAvatar})` : 'none',
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
@@ -217,10 +287,10 @@ export default function HomePage() {
             </>
           ) : (
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => setShowAuthModal(true)} style={{ background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.15)', padding: '6px 14px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
+              <button onClick={() => setShowAuthModal(true)} style={{ background: 'transparent', color: styles.text, border: `1px solid ${styles.border}`, padding: '6px 14px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
                 Sign In
               </button>
-              <button onClick={() => setShowAuthModal(true)} style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
+              <button onClick={() => setShowAuthModal(true)} style={{ background: styles.nav, color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
                 Get Started
               </button>
             </div>
@@ -234,16 +304,16 @@ export default function HomePage() {
         minHeight: '400px',
         display: 'flex',
         alignItems: 'center',
-        background: "linear-gradient(to right, #040711 35%, rgba(4, 7, 17, 0.75) 65%, rgba(4, 7, 17, 0.25) 100%), url('https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=1600&auto=format&fit=crop&q=80')",
+        background: "linear-gradient(to right, rgba(0,0,0,0.85) 35%, rgba(0,0,0,0.6) 65%, rgba(0,0,0,0.2) 100%), url('https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=1600&auto=format&fit=crop&q=80')",
         backgroundSize: 'cover',
         backgroundPosition: 'right 30%',
         padding: '40px 32px',
-        borderBottom: '1px solid rgba(255,255,255,0.06)'
+        borderBottom: `1px solid ${styles.border}`
       }}>
         <div style={{ maxWidth: '540px' }}>
-          <h1 style={{ fontSize: '48px', fontWeight: '900', lineHeight: 1.1, margin: '0 0 14px', letterSpacing: '-1px' }}>
+          <h1 style={{ fontSize: '48px', fontWeight: '900', lineHeight: 1.1, margin: '0 0 14px', letterSpacing: '-1px', color: '#fff' }}>
             Read More, <br />
-            <span style={{ color: '#38bdf8', fontStyle: 'italic', fontFamily: 'serif' }}>Grow Further</span>
+            <span style={{ color: styles.accent, fontStyle: 'italic', fontFamily: 'serif' }}>Grow Further</span>
           </h1>
           <p style={{ color: '#cbd5e1', fontSize: '14px', lineHeight: 1.5, margin: '0 0 24px' }}>
             Discover amazing books, explore new ideas, and build a better you — one page at a time.
@@ -258,7 +328,7 @@ export default function HomePage() {
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{ border: 'none', outline: 'none', flex: 1, fontSize: '13px', color: '#1e293b' }}
             />
-            <button style={{ background: '#2563eb', border: 'none', width: '34px', height: '34px', borderRadius: '50%', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '13px' }}>
+            <button style={{ background: styles.nav, border: 'none', width: '34px', height: '34px', borderRadius: '50%', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '13px' }}>
               ➔
             </button>
           </div>
@@ -275,14 +345,14 @@ export default function HomePage() {
       <section style={{ padding: '36px 32px 20px', maxWidth: '1400px', margin: '0 auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '18px' }}>
           <div>
-            <h2 style={{ fontSize: '20px', fontWeight: '800', margin: '0 0 4px' }}>Featured Books</h2>
-            <p style={{ color: '#64748b', fontSize: '12px', margin: 0 }}>Handpicked books just for you</p>
+            <h2 style={{ fontSize: '20px', fontWeight: '800', margin: '0 0 4px', color: styles.text }}>Featured Books</h2>
+            <p style={{ color: styles.muted, fontSize: '12px', margin: 0 }}>Handpicked books just for you</p>
           </div>
-          <span style={{ color: '#38bdf8', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }} onClick={() => window.location.href = '/library'}>View All ➔</span>
+          <span style={{ color: styles.accent, fontSize: '12px', fontWeight: '600', cursor: 'pointer' }} onClick={() => window.location.href = '/library'}>View All ➔</span>
         </div>
 
         {loading ? (
-          <p style={{ color: '#64748b', fontSize: '13px' }}>Books load ho rahi hain...</p>
+          <p style={{ color: styles.muted, fontSize: '13px' }}>Books load ho rahi hain...</p>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: '20px' }}>
             {filtered.map((book) => {
@@ -292,7 +362,7 @@ export default function HomePage() {
                 : `https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/covers/${rawCover || '1790700033242-teliy6.jpg'}`
 
               return (
-                <div key={book.id || book.title} style={{ background: '#0a0f1d', borderRadius: '16px', padding: '12px', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column' }}>
+                <div key={book.id || book.title} style={{ background: styles.card, borderRadius: '16px', padding: '12px', border: `1px solid ${styles.border}`, display: 'flex', flexDirection: 'column' }}>
                   <div style={{
                     height: '230px',
                     borderRadius: '10px',
@@ -303,20 +373,20 @@ export default function HomePage() {
                     marginBottom: '12px'
                   }}></div>
 
-                  <h4 style={{ fontSize: '14px', fontWeight: '700', margin: '0 0 2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <h4 style={{ fontSize: '14px', fontWeight: '700', margin: '0 0 2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: styles.text }}>
                     {book.title}
                   </h4>
-                  <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 10px' }}>
+                  <p style={{ fontSize: '12px', color: styles.muted, margin: '0 0 10px' }}>
                     {book.author || 'Readora'}
                   </p>
 
                   <div style={{ marginTop: 'auto' }}>
-                    <span style={{ display: 'inline-block', background: 'rgba(56,189,248,0.12)', color: '#38bdf8', fontSize: '10px', fontWeight: 'bold', padding: '3px 8px', borderRadius: '6px', marginBottom: '8px' }}>
+                    <span style={{ display: 'inline-block', background: 'rgba(56,189,248,0.12)', color: styles.accent, fontSize: '10px', fontWeight: 'bold', padding: '3px 8px', borderRadius: '6px', marginBottom: '8px' }}>
                       {book.category || 'Music'}
                     </span>
                     <button
                       onClick={() => handleRead(book)}
-                      style={{ width: '100%', background: '#2563eb', color: '#fff', border: 'none', padding: '8px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}
+                      style={{ width: '100%', background: styles.nav, color: '#fff', border: 'none', padding: '8px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}
                     >
                       📖 Read Book
                     </button>
@@ -332,15 +402,15 @@ export default function HomePage() {
       <section id="categories-section" style={{ padding: '20px 32px 60px', maxWidth: '1400px', margin: '0 auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '16px' }}>
           <div>
-            <h2 style={{ fontSize: '18px', fontWeight: '800', margin: '0 0 4px' }}>Browse by Category</h2>
-            <p style={{ color: '#64748b', fontSize: '12px', margin: 0 }}>Find books in your favorite category</p>
+            <h2 style={{ fontSize: '18px', fontWeight: '800', margin: '0 0 4px', color: styles.text }}>Browse by Category</h2>
+            <p style={{ color: styles.muted, fontSize: '12px', margin: 0 }}>Find books in your favorite category</p>
           </div>
-          <span style={{ color: '#38bdf8', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }} onClick={() => window.location.href = '/library'}>View All ➔</span>
+          <span style={{ color: styles.accent, fontSize: '12px', fontWeight: '600', cursor: 'pointer' }} onClick={() => window.location.href = '/library'}>View All ➔</span>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '12px' }}>
           {categories.map((cat) => (
-            <div key={cat.name} onClick={() => window.location.href = '/library'} style={{ background: '#0a0f1d', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '14px 10px', textAlign: 'center', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '12px', fontWeight: '600' }}>
+            <div key={cat.name} onClick={() => window.location.href = '/library'} style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '12px', padding: '14px 10px', textAlign: 'center', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '12px', fontWeight: '600', color: styles.text }}>
               <span>{cat.icon}</span>
               <span>{cat.name}</span>
             </div>
@@ -392,4 +462,4 @@ export default function HomePage() {
       )}
     </div>
   )
-      }
+              }
