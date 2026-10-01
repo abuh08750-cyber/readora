@@ -14,9 +14,10 @@ interface ChangePasswordModalProps {
   isOpen: boolean
   onClose: () => void
   userEmail?: string
+  isRecoveryMode?: boolean
 }
 
-export default function ChangePasswordModal({ isOpen, onClose, userEmail }: ChangePasswordModalProps) {
+export default function ChangePasswordModal({ isOpen, onClose, userEmail, isRecoveryMode = false }: ChangePasswordModalProps) {
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -33,10 +34,10 @@ export default function ChangePasswordModal({ isOpen, onClose, userEmail }: Chan
 
   if (!isOpen) return null
 
-  // Live Password Requirements
+  // Live Password Requirements Checkers
   const reqMinLength = newPassword.length >= 8
   const reqAlphaNumeric = /[a-zA-Z]/.test(newPassword) && /[0-9]/.test(newPassword)
-  const reqDifferent = newPassword !== '' && newPassword !== currentPassword
+  const reqDifferent = isRecoveryMode ? true : (newPassword !== '' && newPassword !== currentPassword)
   const reqMatches = confirmPassword !== '' && newPassword === confirmPassword
 
   const resetForm = () => {
@@ -62,8 +63,13 @@ export default function ChangePasswordModal({ isOpen, onClose, userEmail }: Chan
     setPwdSuccessMsg('')
     setForgotMsg('')
 
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      setPwdErrorMsg('Please fill in all password fields.')
+    if (!isRecoveryMode && !currentPassword) {
+      setPwdErrorMsg('Please enter your current password.')
+      return
+    }
+
+    if (!newPassword || !confirmPassword) {
+      setPwdErrorMsg('Please fill in both new password fields.')
       return
     }
 
@@ -77,7 +83,7 @@ export default function ChangePasswordModal({ isOpen, onClose, userEmail }: Chan
       return
     }
 
-    if (newPassword === currentPassword) {
+    if (!isRecoveryMode && newPassword === currentPassword) {
       setPwdErrorMsg('New password must be different from your current password.')
       return
     }
@@ -90,20 +96,22 @@ export default function ChangePasswordModal({ isOpen, onClose, userEmail }: Chan
     setPwdLoading(true)
 
     try {
-      // 1. Verify current password
-      const email = userEmail || 'waqasabu186@gmail.com'
-      const { error: signInErr } = await supabase.auth.signInWithPassword({
-        email,
-        password: currentPassword,
-      })
+      // अगर रिकवरी मोड नहीं है, तो पहले करंट पासवर्ड वेरिफ़ाई करें
+      if (!isRecoveryMode) {
+        const email = userEmail || 'waqasabu186@gmail.com'
+        const { error: signInErr } = await supabase.auth.signInWithPassword({
+          email,
+          password: currentPassword,
+        })
 
-      if (signInErr) {
-        setPwdErrorMsg('Current password is incorrect.')
-        setPwdLoading(false)
-        return
+        if (signInErr) {
+          setPwdErrorMsg('Current password is incorrect.')
+          setPwdLoading(false)
+          return
+        }
       }
 
-      // 2. Update to new password via Supabase Auth
+      // Supabase Auth से पासवर्ड अपडेट करें
       const { error: updateErr } = await supabase.auth.updateUser({
         password: newPassword,
       })
@@ -117,13 +125,17 @@ export default function ChangePasswordModal({ isOpen, onClose, userEmail }: Chan
       setPwdSuccessMsg('Password changed successfully.')
       setTimeout(() => {
         handleClose()
+        if (typeof window !== 'undefined' && window.location.hash.includes('type=recovery')) {
+          // URL से टोकन साफ़ करें
+          window.history.replaceState(null, '', window.location.pathname)
+        }
       }, 1600)
     } catch {
       setPwdErrorMsg('Something went wrong. Please try again.')
     } finally {
       setPwdLoading(false)
     }
-  }
+    }
 
   const handleForgotPassword = async () => {
     const email = userEmail || 'waqasabu186@gmail.com'
@@ -221,59 +233,61 @@ export default function ChangePasswordModal({ isOpen, onClose, userEmail }: Chan
           </div>
           <div>
             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', letterSpacing: '-0.3px', color: '#fff' }}>
-              Change Password
+              {isRecoveryMode ? 'Reset Password' : 'Change Password'}
             </h3>
             <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#94a3b8' }}>
-              Keep your account secure. Choose a strong password.
+              {isRecoveryMode ? 'Set a new secure password for your account.' : 'Keep your account secure. Choose a strong password.'}
             </p>
           </div>
         </div>
 
         <form onSubmit={handlePasswordSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {/* Current Password Field */}
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#e2e8f0', marginBottom: '6px' }}>
-              Current Password
-            </label>
-            <div style={{ position: 'relative' }}>
-              <input
-                type={showCurrentPassword ? 'text' : 'password'}
-                placeholder="Enter your current password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                required
-                style={{
-                  width: '100%',
-                  background: '#0d1527',
-                  border: '1px solid rgba(255, 255, 255, 0.09)',
-                  borderRadius: '10px',
-                  padding: '11px 42px 11px 14px',
-                  color: '#fff',
-                  fontSize: '13px',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                style={{
-                  position: 'absolute',
-                  right: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  color: '#94a3b8',
-                  cursor: 'pointer',
-                  fontSize: '16px',
-                  padding: 0,
-                }}
-              >
-                {showCurrentPassword ? '👁️' : '👁️‍🗨️'}
-              </button>
+          {/* Current Password Field (सिर्फ सामान्य मोड में दिखेगा) */}
+          {!isRecoveryMode && (
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#e2e8f0', marginBottom: '6px' }}>
+                Current Password
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showCurrentPassword ? 'text' : 'password'}
+                  placeholder="Enter your current password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  required={!isRecoveryMode}
+                  style={{
+                    width: '100%',
+                    background: '#0d1527',
+                    border: '1px solid rgba(255, 255, 255, 0.09)',
+                    borderRadius: '10px',
+                    padding: '11px 42px 11px 14px',
+                    color: '#fff',
+                    fontSize: '13px',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: '#94a3b8',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    padding: 0,
+                  }}
+                >
+                  {showCurrentPassword ? '👁️' : '👁️‍🗨️'}
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* New Password Field */}
           <div>
@@ -315,7 +329,7 @@ export default function ChangePasswordModal({ isOpen, onClose, userEmail }: Chan
                   padding: 0,
                 }}
               >
-                {showNewPassword ? '👁️' : '👁️️‍🗨️'}
+                {showNewPassword ? '👁️' : '👁️‍🗨️'}
               </button>
             </div>
           </div>
@@ -360,7 +374,7 @@ export default function ChangePasswordModal({ isOpen, onClose, userEmail }: Chan
                   padding: 0,
                 }}
               >
-                {showConfirmPassword ? '👁️' : '👁️️‍🗨️'}
+                {showConfirmPassword ? '👁️' : '👁️‍🗨️'}
               </button>
             </div>
             {confirmPassword && !reqMatches && (
@@ -392,10 +406,12 @@ export default function ChangePasswordModal({ isOpen, onClose, userEmail }: Chan
                 <span>{reqAlphaNumeric ? '✓' : '•'}</span>
                 <span>Must contain both letters and numbers</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: reqDifferent ? '#10b981' : '#94a3b8' }}>
-                <span>{reqDifferent ? '✓' : '•'}</span>
-                <span>New password current password se different ho</span>
-              </div>
+              {!isRecoveryMode && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: reqDifferent ? '#10b981' : '#94a3b8' }}>
+                  <span>{reqDifferent ? '✓' : '•'}</span>
+                  <span>New password current password se different ho</span>
+                </div>
+              )}
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: reqMatches ? '#10b981' : '#94a3b8' }}>
                 <span>{reqMatches ? '✓' : '•'}</span>
                 <span>New password aur confirm password same hone chahiye</span>
@@ -403,25 +419,27 @@ export default function ChangePasswordModal({ isOpen, onClose, userEmail }: Chan
             </div>
           </div>
 
-          {/* Forgot Password Action Link */}
-          <div
-            onClick={handleForgotPassword}
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              cursor: 'pointer',
-              padding: '8px 2px',
-            }}
-          >
-            <div>
-              <b style={{ fontSize: '12px', color: '#38bdf8', display: 'block' }}>Forgot password?</b>
-              <span style={{ fontSize: '11px', color: '#64748b' }}>Use email verification to reset your password.</span>
+          {/* Forgot Password Action Link (केवल सामान्य मोड में दिखेगा) */}
+          {!isRecoveryMode && (
+            <div
+              onClick={handleForgotPassword}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                cursor: 'pointer',
+                padding: '8px 2px',
+              }}
+            >
+              <div>
+                <b style={{ fontSize: '12px', color: '#38bdf8', display: 'block' }}>Forgot password?</b>
+                <span style={{ fontSize: '11px', color: '#64748b' }}>Use email verification to reset your password.</span>
+              </div>
+              <span style={{ color: '#38bdf8', fontSize: '14px', fontWeight: 'bold' }}>
+                {forgotLoading ? '⌛' : '›'}
+              </span>
             </div>
-            <span style={{ color: '#38bdf8', fontSize: '14px', fontWeight: 'bold' }}>
-              {forgotLoading ? '⌛' : '›'}
-            </span>
-          </div>
+          )}
 
           {/* Status Messages */}
           {pwdErrorMsg && (
@@ -440,7 +458,7 @@ export default function ChangePasswordModal({ isOpen, onClose, userEmail }: Chan
             </div>
           )}
 
-          {/* Buttons: Cancel & Update Password */}
+          {/* Action Buttons */}
           <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
             <button
               type="button"
@@ -481,11 +499,11 @@ export default function ChangePasswordModal({ isOpen, onClose, userEmail }: Chan
               }}
             >
               <span>🔄</span>
-              <span>{pwdLoading ? 'Updating...' : 'Update Password'}</span>
+              <span>{pwdLoading ? 'Updating...' : (isRecoveryMode ? 'Save Password' : 'Update Password')}</span>
             </button>
           </div>
         </form>
       </div>
     </div>
   )
-          }
+        }
