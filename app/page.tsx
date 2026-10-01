@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
+import NotificationDropdown from '@/components/NotificationDropdown'
 
 const SUPABASE_URL = 'https://stuabcdisgmmxprapfai.supabase.co'
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0dWFiY2Rpc2dtbXhwcmFwZmFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1Njc1NjksImV4cCI6MjEwNjE0MzU2OX0.pGvaQQBWGcbDKgDb_9F1jkUURVXH3bhJ-trQt-GXBZ8'
@@ -39,6 +40,7 @@ export default function HomePage() {
   const [password, setPassword] = useState('')
   const [authError, setAuthError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [headerAvatar, setHeaderAvatar] = useState<string | null>(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -53,6 +55,11 @@ export default function HomePage() {
         setUser(null)
       }
     })
+
+    try {
+      const savedImg = localStorage.getItem('readora_profile_avatar')
+      if (savedImg) setHeaderAvatar(savedImg)
+    } catch {}
 
     async function loadBooks() {
       try {
@@ -106,7 +113,7 @@ export default function HomePage() {
         setShowAuthModal(false)
       }
     }
-  }
+    }
 
   const handleRead = async (book: any) => {
     if (!user) {
@@ -173,31 +180,41 @@ export default function HomePage() {
           </nav>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        {/* Right Nav: Notifications & Profile */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           {user ? (
-            <button
-              type="button"
-              onClick={() => window.location.href = '/settings'}
-              style={{
-                width: '34px',
-                height: '34px',
-                borderRadius: '50%',
-                background: '#2563eb',
-                color: '#ffffff',
-                border: '2px solid rgba(255,255,255,0.25)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: '800',
-                fontSize: '13px',
-                cursor: 'pointer',
-                outline: 'none',
-                boxShadow: '0 2px 8px rgba(37,99,235,0.4)'
-              }}
-              title="Profile & Settings"
-            >
-              {avatarChar}
-            </button>
+            <>
+              {/* Notification Dropdown Component */}
+              <NotificationDropdown />
+
+              {/* Profile Avatar -> Settings */}
+              <button
+                type="button"
+                onClick={() => window.location.href = '/settings'}
+                style={{
+                  width: '34px',
+                  height: '34px',
+                  borderRadius: '50%',
+                  background: '#2563eb',
+                  color: '#ffffff',
+                  border: '2px solid rgba(255,255,255,0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: '800',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  outline: 'none',
+                  boxShadow: '0 2px 8px rgba(37,99,235,0.4)',
+                  backgroundImage: headerAvatar ? `url(${headerAvatar})` : 'none',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                }}
+                title="Profile & Settings"
+              >
+                {!headerAvatar && avatarChar}
+              </button>
+            </>
           ) : (
             <div style={{ display: 'flex', gap: '8px' }}>
               <button onClick={() => setShowAuthModal(true)} style={{ background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.15)', padding: '6px 14px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
@@ -375,5 +392,4 @@ export default function HomePage() {
       )}
     </div>
   )
-}
-  
+      }
