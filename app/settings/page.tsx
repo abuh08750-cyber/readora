@@ -47,13 +47,13 @@ export default function SettingsPage() {
   const [nameError, setNameError] = useState('')
   const [usernameError, setUsernameError] = useState('')
 
-  // Notifications Toggles
+  // Notifications Toggles (Persistent)
   const [notifReleases, setNotifReleases] = useState(true)
   const [notifReminders, setNotifReminders] = useState(false)
   const [notifReplies, setNotifReplies] = useState(true)
   const [notifMarketing, setNotifMarketing] = useState(false)
 
-  // Library Settings Toggles
+  // Library Settings Toggles (Persistent)
   const [syncProgress, setSyncProgress] = useState(true)
   const [autoSavePos, setAutoSavePos] = useState(true)
 
@@ -85,8 +85,78 @@ export default function SettingsPage() {
         if (parsed.fontSize) setFontSize(parsed.fontSize)
         if (parsed.lineSpacing) setLineSpacing(parsed.lineSpacing)
       }
+
+      // Load saved notification toggles
+      const savedNotifs = localStorage.getItem('readora_notif_settings')
+      if (savedNotifs) {
+        const parsedNotifs = JSON.parse(savedNotifs)
+        if (typeof parsedNotifs.releases === 'boolean') setNotifReleases(parsedNotifs.releases)
+        if (typeof parsedNotifs.reminders === 'boolean') setNotifReminders(parsedNotifs.reminders)
+        if (typeof parsedNotifs.replies === 'boolean') setNotifReplies(parsedNotifs.replies)
+        if (typeof parsedNotifs.marketing === 'boolean') setNotifMarketing(parsedNotifs.marketing)
+      }
+
+      // Load saved library settings toggles
+      const savedLibToggles = localStorage.getItem('readora_library_toggles')
+      if (savedLibToggles) {
+        const parsedLib = JSON.parse(savedLibToggles)
+        if (typeof parsedLib.syncProgress === 'boolean') setSyncProgress(parsedLib.syncProgress)
+        if (typeof parsedLib.autoSavePos === 'boolean') setAutoSavePos(parsedLib.autoSavePos)
+      }
     } catch (e) {}
   }, [])
+
+  // Helper to persist Notification toggle changes
+  const toggleNotification = (key: 'releases' | 'reminders' | 'replies' | 'marketing') => {
+    let nextReleases = notifReleases
+    let nextReminders = notifReminders
+    let nextReplies = notifReplies
+    let nextMarketing = notifMarketing
+
+    if (key === 'releases') {
+      nextReleases = !notifReleases
+      setNotifReleases(nextReleases)
+    } else if (key === 'reminders') {
+      nextReminders = !notifReminders
+      setNotifReminders(nextReminders)
+    } else if (key === 'replies') {
+      nextReplies = !notifReplies
+      setNotifReplies(nextReplies)
+    } else if (key === 'marketing') {
+      nextMarketing = !notifMarketing
+      setNotifMarketing(nextMarketing)
+    }
+
+    try {
+      localStorage.setItem('readora_notif_settings', JSON.stringify({
+        releases: nextReleases,
+        reminders: nextReminders,
+        replies: nextReplies,
+        marketing: nextMarketing,
+      }))
+    } catch (e) {}
+  }
+
+  // Helper to persist Library toggle changes
+  const toggleLibrarySetting = (key: 'sync' | 'autoSave') => {
+    let nextSync = syncProgress
+    let nextAutoSave = autoSavePos
+
+    if (key === 'sync') {
+      nextSync = !syncProgress
+      setSyncProgress(nextSync)
+    } else if (key === 'autoSave') {
+      nextAutoSave = !autoSavePos
+      setAutoSavePos(nextAutoSave)
+    }
+
+    try {
+      localStorage.setItem('readora_library_toggles', JSON.stringify({
+        syncProgress: nextSync,
+        autoSavePos: nextAutoSave,
+      }))
+    } catch (e) {}
+  }
 
   // Dynamic Theme Colors
   const styles = (() => {
@@ -276,7 +346,7 @@ export default function SettingsPage() {
             <div onClick={() => window.location.href = '/library'} style={{ padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', color: styles.muted }}>📑 My Books</div>
             <div onClick={() => window.location.href = '/library'} style={{ padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', color: styles.muted }}>🕒 Recently Read</div>
             <div onClick={() => window.location.href = '/library'} style={{ padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', color: styles.muted }}>🤍 Favorites</div>
-            <div style={{ padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', color: '#fff', background: styles.nav, fontWeight: 'bold' }}>⚙️️ Settings</div>
+            <div style={{ padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', color: '#fff', background: styles.nav, fontWeight: 'bold' }}>⚙️ Settings</div>
           </nav>
         </div>
 
@@ -373,7 +443,7 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* All 6 Cards Restored (Exactly as before) */}
+          {/* Cards Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '18px' }}>
             
             {/* Card 1: Account Settings */}
@@ -416,9 +486,6 @@ export default function SettingsPage() {
                     />
                     <span style={{ position: 'absolute', right: '10px', top: '8px', fontSize: '12px', opacity: 0.6 }}>🔒</span>
                   </div>
-                  <span style={{ fontSize: '10px', color: styles.muted, marginTop: '2px', display: 'block' }}>
-                    Registered email cannot be modified.
-                  </span>
                 </div>
 
                 <div>
@@ -441,7 +508,7 @@ export default function SettingsPage() {
               </form>
             </div>
 
-            {/* Card 2: Reading Preferences (All dropdowns restored) */}
+            {/* Card 2: Reading Preferences */}
             <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                 <span style={{ fontSize: '16px', color: styles.accent }}>📖</span>
@@ -525,7 +592,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                {/* Custom Spectrum Wheel (Opens on Custom) */}
+                {/* Custom Spectrum Wheel */}
                 {activeTheme === 'Custom' && (
                   <div style={{ background: styles.inner, border: `1px solid ${styles.border}`, borderRadius: '10px', padding: '10px 12px' }}>
                     <span style={{ fontSize: '11px', color: styles.muted, display: 'block', marginBottom: '6px' }}>Pick Custom Color:</span>
@@ -548,7 +615,7 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* Card 3: Notifications (All 4 options restored) */}
+            {/* Card 3: Notifications (Fully Persistent Toggles) */}
             <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                 <span style={{ fontSize: '16px', color: styles.accent }}>🔔</span>
@@ -557,49 +624,137 @@ export default function SettingsPage() {
               <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Get notified about new books and updates.</p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {/* Toggle 1: New Book Releases */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <b style={{ fontSize: '12px', display: 'block' }}>New Book Releases</b>
                     <span style={{ fontSize: '10px', color: styles.muted }}>Be the first to know about new arrivals</span>
                   </div>
-                  <div onClick={() => setNotifReleases(!notifReleases)} style={{ width: '38px', height: '22px', background: notifReleases ? styles.nav : styles.inner, borderRadius: '12px', position: 'relative', cursor: 'pointer', border: `1px solid ${styles.border}` }}>
-                    <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: notifReleases ? '18px' : '2px', transition: '0.2s' }} />
+                  <div
+                    onClick={() => toggleNotification('releases')}
+                    style={{
+                      width: '38px',
+                      height: '22px',
+                      background: notifReleases ? styles.nav : styles.inner,
+                      borderRadius: '12px',
+                      position: 'relative',
+                      cursor: 'pointer',
+                      border: `1px solid ${styles.border}`,
+                      transition: '0.2s',
+                    }}
+                  >
+                    <div style={{
+                      width: '16px',
+                      height: '16px',
+                      background: '#fff',
+                      borderRadius: '50%',
+                      position: 'absolute',
+                      top: '2px',
+                      left: notifReleases ? '18px' : '2px',
+                      transition: '0.2s',
+                    }} />
                   </div>
                 </div>
 
+                {/* Toggle 2: Reading Reminders */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <b style={{ fontSize: '12px', display: 'block' }}>Reading Reminders</b>
                     <span style={{ fontSize: '10px', color: styles.muted }}>Daily/weekly reading goals</span>
                   </div>
-                  <div onClick={() => setNotifReminders(!notifReminders)} style={{ width: '38px', height: '22px', background: notifReminders ? styles.nav : styles.inner, borderRadius: '12px', position: 'relative', cursor: 'pointer', border: `1px solid ${styles.border}` }}>
-                    <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: notifReminders ? '18px' : '2px', transition: '0.2s' }} />
+                  <div
+                    onClick={() => toggleNotification('reminders')}
+                    style={{
+                      width: '38px',
+                      height: '22px',
+                      background: notifReminders ? styles.nav : styles.inner,
+                      borderRadius: '12px',
+                      position: 'relative',
+                      cursor: 'pointer',
+                      border: `1px solid ${styles.border}`,
+                      transition: '0.2s',
+                    }}
+                  >
+                    <div style={{
+                      width: '16px',
+                      height: '16px',
+                      background: '#fff',
+                      borderRadius: '50%',
+                      position: 'absolute',
+                      top: '2px',
+                      left: notifReminders ? '18px' : '2px',
+                      transition: '0.2s',
+                    }} />
                   </div>
                 </div>
 
+                {/* Toggle 3: Comments & Replies */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <b style={{ fontSize: '12px', display: 'block' }}>Comments & Replies</b>
                     <span style={{ fontSize: '10px', color: styles.muted }}>Get notified about your activity</span>
                   </div>
-                  <div onClick={() => setNotifReplies(!notifReplies)} style={{ width: '38px', height: '22px', background: notifReplies ? styles.nav : styles.inner, borderRadius: '12px', position: 'relative', cursor: 'pointer', border: `1px solid ${styles.border}` }}>
-                    <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: notifReplies ? '18px' : '2px', transition: '0.2s' }} />
+                  <div
+                    onClick={() => toggleNotification('replies')}
+                    style={{
+                      width: '38px',
+                      height: '22px',
+                      background: notifReplies ? styles.nav : styles.inner,
+                      borderRadius: '12px',
+                      position: 'relative',
+                      cursor: 'pointer',
+                      border: `1px solid ${styles.border}`,
+                      transition: '0.2s',
+                    }}
+                  >
+                    <div style={{
+                      width: '16px',
+                      height: '16px',
+                      background: '#fff',
+                      borderRadius: '50%',
+                      position: 'absolute',
+                      top: '2px',
+                      left: notifReplies ? '18px' : '2px',
+                      transition: '0.2s',
+                    }} />
                   </div>
                 </div>
 
+                {/* Toggle 4: Marketing & Updates */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <b style={{ fontSize: '12px', display: 'block' }}>Marketing & Updates</b>
                     <span style={{ fontSize: '10px', color: styles.muted }}>Product updates, offers and news</span>
                   </div>
-                  <div onClick={() => setNotifMarketing(!notifMarketing)} style={{ width: '38px', height: '22px', background: notifMarketing ? styles.nav : styles.inner, borderRadius: '12px', position: 'relative', cursor: 'pointer', border: `1px solid ${styles.border}` }}>
-                    <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: notifMarketing ? '18px' : '2px', transition: '0.2s' }} />
+                  <div
+                    onClick={() => toggleNotification('marketing')}
+                    style={{
+                      width: '38px',
+                      height: '22px',
+                      background: notifMarketing ? styles.nav : styles.inner,
+                      borderRadius: '12px',
+                      position: 'relative',
+                      cursor: 'pointer',
+                      border: `1px solid ${styles.border}`,
+                      transition: '0.2s',
+                    }}
+                  >
+                    <div style={{
+                      width: '16px',
+                      height: '16px',
+                      background: '#fff',
+                      borderRadius: '50%',
+                      position: 'absolute',
+                      top: '2px',
+                      left: notifMarketing ? '18px' : '2px',
+                      transition: '0.2s',
+                    }} />
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Card 4: Privacy & Security (All 4 options restored) */}
+            {/* Card 4: Privacy & Security */}
             <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                 <span style={{ fontSize: '16px', color: styles.accent }}>🛡️</span>
@@ -642,7 +797,7 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* Card 5: Library Settings (All 4 options restored) */}
+            {/* Card 5: Library Settings (Fully Persistent Toggles) */}
             <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                 <span style={{ fontSize: '16px', color: styles.accent }}>📚</span>
@@ -659,23 +814,67 @@ export default function SettingsPage() {
                   <span style={{ color: styles.muted }}>›</span>
                 </div>
 
+                {/* Library Toggle 1: Reading Progress */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <b style={{ fontSize: '12px', display: 'block' }}>Reading Progress</b>
                     <span style={{ fontSize: '10px', color: styles.muted }}>Sync across devices</span>
                   </div>
-                  <div onClick={() => setSyncProgress(!syncProgress)} style={{ width: '38px', height: '22px', background: syncProgress ? styles.nav : styles.inner, borderRadius: '12px', position: 'relative', cursor: 'pointer', border: `1px solid ${styles.border}` }}>
-                    <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: syncProgress ? '18px' : '2px', transition: '0.2s' }} />
+                  <div
+                    onClick={() => toggleLibrarySetting('sync')}
+                    style={{
+                      width: '38px',
+                      height: '22px',
+                      background: syncProgress ? styles.nav : styles.inner,
+                      borderRadius: '12px',
+                      position: 'relative',
+                      cursor: 'pointer',
+                      border: `1px solid ${styles.border}`,
+                      transition: '0.2s',
+                    }}
+                  >
+                    <div style={{
+                      width: '16px',
+                      height: '16px',
+                      background: '#fff',
+                      borderRadius: '50%',
+                      position: 'absolute',
+                      top: '2px',
+                      left: syncProgress ? '18px' : '2px',
+                      transition: '0.2s',
+                    }} />
                   </div>
                 </div>
 
+                {/* Library Toggle 2: Auto Save */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <b style={{ fontSize: '12px', display: 'block' }}>Auto Save</b>
                     <span style={{ fontSize: '10px', color: styles.muted }}>Save your reading position</span>
                   </div>
-                  <div onClick={() => setAutoSavePos(!autoSavePos)} style={{ width: '38px', height: '22px', background: autoSavePos ? styles.nav : styles.inner, borderRadius: '12px', position: 'relative', cursor: 'pointer', border: `1px solid ${styles.border}` }}>
-                    <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: autoSavePos ? '18px' : '2px', transition: '0.2s' }} />
+                  <div
+                    onClick={() => toggleLibrarySetting('autoSave')}
+                    style={{
+                      width: '38px',
+                      height: '22px',
+                      background: autoSavePos ? styles.nav : styles.inner,
+                      borderRadius: '12px',
+                      position: 'relative',
+                      cursor: 'pointer',
+                      border: `1px solid ${styles.border}`,
+                      transition: '0.2s',
+                    }}
+                  >
+                    <div style={{
+                      width: '16px',
+                      height: '16px',
+                      background: '#fff',
+                      borderRadius: '50%',
+                      position: 'absolute',
+                      top: '2px',
+                      left: autoSavePos ? '18px' : '2px',
+                      transition: '0.2s',
+                    }} />
                   </div>
                 </div>
 
@@ -684,12 +883,12 @@ export default function SettingsPage() {
                     <b style={{ fontSize: '12px', display: 'block' }}>Clear Cache</b>
                     <span style={{ fontSize: '10px', color: styles.muted }}>Free up storage space</span>
                   </div>
-                  <button onClick={() => alert('Cache cleared!')} style={{ background: styles.inner, color: styles.muted, border: `1px solid ${styles.border}`, padding: '5px 12px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer' }}>Clear</button>
+                  <button onClick={() => alert('Cache cleared successfully!')} style={{ background: styles.inner, color: styles.muted, border: `1px solid ${styles.border}`, padding: '5px 12px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer' }}>Clear</button>
                 </div>
               </div>
             </div>
 
-            {/* Card 6: Support & Help (All 4 links restored) */}
+            {/* Card 6: Support & Help */}
             <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                 <span style={{ fontSize: '16px', color: styles.accent }}>🎧</span>
@@ -738,4 +937,4 @@ export default function SettingsPage() {
       </main>
     </div>
   )
-      }
+}
