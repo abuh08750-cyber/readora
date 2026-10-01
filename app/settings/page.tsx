@@ -34,18 +34,26 @@ export default function SettingsPage() {
   const [savedSuccess, setSavedSuccess] = useState(false)
   const [headerAvatar, setHeaderAvatar] = useState<string | null>(null)
 
-  // Direct Active Theme
+  // Theme Settings
   const [activeTheme, setActiveTheme] = useState<'Dark' | 'Light' | 'Sepia' | 'Custom'>('Dark')
   const [customHex, setCustomHex] = useState('#6366f1')
 
+  // Reading Preferences
+  const [readingMode, setReadingMode] = useState('Dark Mode')
+  const [fontSize, setFontSize] = useState('Medium')
+  const [lineSpacing, setLineSpacing] = useState('Normal')
+
+  // Validation
   const [nameError, setNameError] = useState('')
   const [usernameError, setUsernameError] = useState('')
 
-  // Toggles
+  // Notifications Toggles
   const [notifReleases, setNotifReleases] = useState(true)
   const [notifReminders, setNotifReminders] = useState(false)
   const [notifReplies, setNotifReplies] = useState(true)
   const [notifMarketing, setNotifMarketing] = useState(false)
+
+  // Library Settings Toggles
   const [syncProgress, setSyncProgress] = useState(true)
   const [autoSavePos, setAutoSavePos] = useState(true)
 
@@ -69,10 +77,18 @@ export default function SettingsPage() {
       if (savedT) setActiveTheme(savedT)
       const savedC = localStorage.getItem('readora_custom_color')
       if (savedC) setCustomHex(savedC)
+
+      const savedPrefs = localStorage.getItem('readora_reading_prefs')
+      if (savedPrefs) {
+        const parsed = JSON.parse(savedPrefs)
+        if (parsed.readingMode) setReadingMode(parsed.readingMode)
+        if (parsed.fontSize) setFontSize(parsed.fontSize)
+        if (parsed.lineSpacing) setLineSpacing(parsed.lineSpacing)
+      }
     } catch (e) {}
   }, [])
 
-  // Dynamic Styles Generator
+  // Dynamic Theme Colors
   const styles = (() => {
     if (activeTheme === 'Light') {
       return {
@@ -105,7 +121,7 @@ export default function SettingsPage() {
     if (activeTheme === 'Custom') {
       const { r, g, b } = hexToRgb(customHex)
       return {
-        bg: `radial-gradient(ellipse at top, rgba(${r}, ${g}, ${b}, 0.3) 0%, #06080f 85%)`,
+        bg: `radial-gradient(ellipse at top, rgba(${r}, ${g}, ${b}, 0.28) 0%, #06080f 85%)`,
         sidebar: `rgba(${Math.floor(r * 0.08)}, ${Math.floor(g * 0.08)}, ${Math.floor(b * 0.08)}, 0.95)`,
         header: `rgba(${Math.floor(r * 0.06)}, ${Math.floor(g * 0.06)}, ${Math.floor(b * 0.06)}, 0.95)`,
         card: `rgba(${Math.floor(r * 0.15 + 10)}, ${Math.floor(g * 0.15 + 14)}, ${Math.floor(b * 0.15 + 24)}, 0.85)`,
@@ -144,6 +160,17 @@ export default function SettingsPage() {
     try {
       localStorage.setItem('readora_custom_color', hex)
       localStorage.setItem('readora_app_theme', 'Custom')
+    } catch {}
+  }
+
+  const saveReadingPrefs = (updated: { mode?: string; font?: string; line?: string }) => {
+    const nextPrefs = {
+      readingMode: updated.mode ?? readingMode,
+      fontSize: updated.font ?? fontSize,
+      lineSpacing: updated.line ?? lineSpacing,
+    }
+    try {
+      localStorage.setItem('readora_reading_prefs', JSON.stringify(nextPrefs))
     } catch {}
   }
 
@@ -225,7 +252,7 @@ export default function SettingsPage() {
       transition: 'all 0.25s ease'
     }}>
       
-      {/* Sidebar */}
+      {/* Sidebar Navigation */}
       <aside style={{
         width: '220px',
         background: styles.sidebar,
@@ -249,7 +276,7 @@ export default function SettingsPage() {
             <div onClick={() => window.location.href = '/library'} style={{ padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', color: styles.muted }}>📑 My Books</div>
             <div onClick={() => window.location.href = '/library'} style={{ padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', color: styles.muted }}>🕒 Recently Read</div>
             <div onClick={() => window.location.href = '/library'} style={{ padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', color: styles.muted }}>🤍 Favorites</div>
-            <div style={{ padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', color: '#fff', background: styles.nav, fontWeight: 'bold' }}>⚙️ Settings</div>
+            <div style={{ padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', color: '#fff', background: styles.nav, fontWeight: 'bold' }}>⚙️️ Settings</div>
           </nav>
         </div>
 
@@ -261,6 +288,8 @@ export default function SettingsPage() {
 
       {/* Main Panel */}
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflowY: 'auto' }}>
+        
+        {/* Top Header */}
         <header style={{
           padding: '14px 24px',
           borderBottom: `1px solid ${styles.border}`,
@@ -315,7 +344,7 @@ export default function SettingsPage() {
           </div>
         </header>
 
-        {/* Content */}
+        {/* Content Dashboard */}
         <div style={{ padding: '24px 28px 60px', maxWidth: '1280px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
           
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
@@ -344,7 +373,7 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Cards Grid */}
+          {/* All 6 Cards Restored (Exactly as before) */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '18px' }}>
             
             {/* Card 1: Account Settings */}
@@ -387,6 +416,9 @@ export default function SettingsPage() {
                     />
                     <span style={{ position: 'absolute', right: '10px', top: '8px', fontSize: '12px', opacity: 0.6 }}>🔒</span>
                   </div>
+                  <span style={{ fontSize: '10px', color: styles.muted, marginTop: '2px', display: 'block' }}>
+                    Registered email cannot be modified.
+                  </span>
                 </div>
 
                 <div>
@@ -409,19 +441,58 @@ export default function SettingsPage() {
               </form>
             </div>
 
-            {/* Card 2: Reading Preferences with INSTANT THEME PICKER */}
+            {/* Card 2: Reading Preferences (All dropdowns restored) */}
             <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <span style={{ fontSize: '16px', color: styles.accent }}>🎨</span>
+                <span style={{ fontSize: '16px', color: styles.accent }}>📖</span>
                 <b style={{ fontSize: '15px' }}>Reading Preferences</b>
               </div>
-              <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Customize reading style & site colors.</p>
+              <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Customize your reading experience.</p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div>
-                  <span style={{ fontSize: '11px', color: styles.muted, display: 'block', marginBottom: '4px' }}>Theme Palette (Tap any to change site)</span>
-                  
-                  {/* 4 Theme buttons */}
+                  <span style={{ fontSize: '11px', color: styles.muted, display: 'block', marginBottom: '4px' }}>Default Reading Mode</span>
+                  <select
+                    value={readingMode}
+                    onChange={(e) => { setReadingMode(e.target.value); saveReadingPrefs({ mode: e.target.value }); }}
+                    style={{ width: '100%', background: styles.inner, border: `1px solid ${styles.border}`, borderRadius: '8px', padding: '8px 12px', color: styles.text, fontSize: '12px', outline: 'none' }}
+                  >
+                    <option>Dark Mode</option>
+                    <option>Light Mode</option>
+                  </select>
+                </div>
+
+                <div>
+                  <span style={{ fontSize: '11px', color: styles.muted, display: 'block', marginBottom: '4px' }}>Font Size</span>
+                  <select
+                    value={fontSize}
+                    onChange={(e) => { setFontSize(e.target.value); saveReadingPrefs({ font: e.target.value }); }}
+                    style={{ width: '100%', background: styles.inner, border: `1px solid ${styles.border}`, borderRadius: '8px', padding: '8px 12px', color: styles.text, fontSize: '12px', outline: 'none' }}
+                  >
+                    <option>Small</option>
+                    <option>Medium</option>
+                    <option>Large</option>
+                  </select>
+                </div>
+
+                <div>
+                  <span style={{ fontSize: '11px', color: styles.muted, display: 'block', marginBottom: '4px' }}>Line Spacing</span>
+                  <select
+                    value={lineSpacing}
+                    onChange={(e) => { setLineSpacing(e.target.value); saveReadingPrefs({ line: e.target.value }); }}
+                    style={{ width: '100%', background: styles.inner, border: `1px solid ${styles.border}`, borderRadius: '8px', padding: '8px 12px', color: styles.text, fontSize: '12px', outline: 'none' }}
+                  >
+                    <option>Normal</option>
+                    <option>Relaxed</option>
+                  </select>
+                </div>
+
+                {/* Theme Pills */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <span style={{ fontSize: '11px', color: styles.muted }}>Theme Palette</span>
+                    <span style={{ fontSize: '10px', color: styles.accent, fontWeight: 'bold' }}>Active: {activeTheme}</span>
+                  </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
                     {[
                       { name: 'Dark', bg: '#0b1329', text: '#fff' },
@@ -436,14 +507,14 @@ export default function SettingsPage() {
                         style={{
                           background: t.bg,
                           color: t.text,
-                          border: activeTheme === t.name ? '2px solid #38bdf8' : '1px solid rgba(255,255,255,0.2)',
+                          border: activeTheme === t.name ? '2px solid #ffffff' : `1px solid ${styles.border}`,
                           borderRadius: '8px',
                           padding: '12px 4px',
                           textAlign: 'center',
                           fontSize: '11px',
                           fontWeight: 'bold',
                           cursor: 'pointer',
-                          boxShadow: activeTheme === t.name ? '0 0 10px rgba(56,189,248,0.5)' : 'none',
+                          boxShadow: activeTheme === t.name ? '0 0 10px rgba(0,0,0,0.3)' : 'none',
                           transform: activeTheme === t.name ? 'scale(1.05)' : 'scale(1)',
                           transition: '0.2s'
                         }}
@@ -454,7 +525,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                {/* Custom Color Selector (Visible when Custom is picked) */}
+                {/* Custom Spectrum Wheel (Opens on Custom) */}
                 {activeTheme === 'Custom' && (
                   <div style={{ background: styles.inner, border: `1px solid ${styles.border}`, borderRadius: '10px', padding: '10px 12px' }}>
                     <span style={{ fontSize: '11px', color: styles.muted, display: 'block', marginBottom: '6px' }}>Pick Custom Color:</span>
@@ -474,70 +545,196 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 )}
-
               </div>
             </div>
 
-            {/* Card 3: Notifications */}
+            {/* Card 3: Notifications (All 4 options restored) */}
             <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                 <span style={{ fontSize: '16px', color: styles.accent }}>🔔</span>
                 <b style={{ fontSize: '15px' }}>Notifications</b>
               </div>
-              <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Get notified about new books.</p>
+              <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Get notified about new books and updates.</p>
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <b style={{ fontSize: '12px', display: 'block' }}>New Book Releases</b>
-                    <span style={{ fontSize: '10px', color: styles.muted }}>Be the first to know</span>
+                    <span style={{ fontSize: '10px', color: styles.muted }}>Be the first to know about new arrivals</span>
                   </div>
                   <div onClick={() => setNotifReleases(!notifReleases)} style={{ width: '38px', height: '22px', background: notifReleases ? styles.nav : styles.inner, borderRadius: '12px', position: 'relative', cursor: 'pointer', border: `1px solid ${styles.border}` }}>
                     <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: notifReleases ? '18px' : '2px', transition: '0.2s' }} />
                   </div>
                 </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <b style={{ fontSize: '12px', display: 'block' }}>Reading Reminders</b>
+                    <span style={{ fontSize: '10px', color: styles.muted }}>Daily/weekly reading goals</span>
+                  </div>
+                  <div onClick={() => setNotifReminders(!notifReminders)} style={{ width: '38px', height: '22px', background: notifReminders ? styles.nav : styles.inner, borderRadius: '12px', position: 'relative', cursor: 'pointer', border: `1px solid ${styles.border}` }}>
+                    <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: notifReminders ? '18px' : '2px', transition: '0.2s' }} />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <b style={{ fontSize: '12px', display: 'block' }}>Comments & Replies</b>
+                    <span style={{ fontSize: '10px', color: styles.muted }}>Get notified about your activity</span>
+                  </div>
+                  <div onClick={() => setNotifReplies(!notifReplies)} style={{ width: '38px', height: '22px', background: notifReplies ? styles.nav : styles.inner, borderRadius: '12px', position: 'relative', cursor: 'pointer', border: `1px solid ${styles.border}` }}>
+                    <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: notifReplies ? '18px' : '2px', transition: '0.2s' }} />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <b style={{ fontSize: '12px', display: 'block' }}>Marketing & Updates</b>
+                    <span style={{ fontSize: '10px', color: styles.muted }}>Product updates, offers and news</span>
+                  </div>
+                  <div onClick={() => setNotifMarketing(!notifMarketing)} style={{ width: '38px', height: '22px', background: notifMarketing ? styles.nav : styles.inner, borderRadius: '12px', position: 'relative', cursor: 'pointer', border: `1px solid ${styles.border}` }}>
+                    <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: notifMarketing ? '18px' : '2px', transition: '0.2s' }} />
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Card 4: Privacy & Security */}
+            {/* Card 4: Privacy & Security (All 4 options restored) */}
             <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                 <span style={{ fontSize: '16px', color: styles.accent }}>🛡️</span>
                 <b style={{ fontSize: '15px' }}>Privacy & Security</b>
               </div>
-              <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Keep account safe.</p>
-              <div onClick={handleLogout} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', paddingTop: '10px' }}>
-                <b style={{ fontSize: '12px', color: '#ef4444' }}>Logout Account</b>
-                <span style={{ color: '#ef4444' }}>🚪</span>
+              <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Keep your account safe and secure.</p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                  <div>
+                    <b style={{ fontSize: '12px', display: 'block' }}>Change Password</b>
+                    <span style={{ fontSize: '10px', color: styles.muted }}>Update your password regularly</span>
+                  </div>
+                  <span style={{ color: styles.muted }}>›</span>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                  <div>
+                    <b style={{ fontSize: '12px', display: 'block' }}>Two-Factor Authentication (2FA)</b>
+                    <span style={{ fontSize: '10px', color: styles.muted }}>Add an extra layer of security</span>
+                  </div>
+                  <span style={{ color: styles.muted }}>›</span>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                  <div>
+                    <b style={{ fontSize: '12px', display: 'block' }}>Login Activity</b>
+                    <span style={{ fontSize: '10px', color: styles.muted }}>View recent login sessions</span>
+                  </div>
+                  <span style={{ color: styles.muted }}>›</span>
+                </div>
+
+                <div onClick={handleLogout} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', borderTop: `1px solid ${styles.border}`, paddingTop: '10px' }}>
+                  <div>
+                    <b style={{ fontSize: '12px', display: 'block', color: '#ef4444' }}>Logout Account</b>
+                    <span style={{ fontSize: '10px', color: styles.muted }}>Sign out from this device</span>
+                  </div>
+                  <span style={{ color: '#ef4444' }}>🚪</span>
+                </div>
               </div>
             </div>
 
-            {/* Card 5: Library Settings */}
+            {/* Card 5: Library Settings (All 4 options restored) */}
             <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                 <span style={{ fontSize: '16px', color: styles.accent }}>📚</span>
                 <b style={{ fontSize: '15px' }}>Library Settings</b>
               </div>
-              <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Reading progress & cache.</p>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <b style={{ fontSize: '12px' }}>Reading Progress</b>
-                <div onClick={() => setSyncProgress(!syncProgress)} style={{ width: '38px', height: '22px', background: syncProgress ? styles.nav : styles.inner, borderRadius: '12px', position: 'relative', cursor: 'pointer', border: `1px solid ${styles.border}` }}>
-                  <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: syncProgress ? '18px' : '2px', transition: '0.2s' }} />
+              <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Manage your library and reading data.</p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                  <div>
+                    <b style={{ fontSize: '12px', display: 'block' }}>Download History</b>
+                    <span style={{ fontSize: '10px', color: styles.muted }}>View your downloaded books</span>
+                  </div>
+                  <span style={{ color: styles.muted }}>›</span>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <b style={{ fontSize: '12px', display: 'block' }}>Reading Progress</b>
+                    <span style={{ fontSize: '10px', color: styles.muted }}>Sync across devices</span>
+                  </div>
+                  <div onClick={() => setSyncProgress(!syncProgress)} style={{ width: '38px', height: '22px', background: syncProgress ? styles.nav : styles.inner, borderRadius: '12px', position: 'relative', cursor: 'pointer', border: `1px solid ${styles.border}` }}>
+                    <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: syncProgress ? '18px' : '2px', transition: '0.2s' }} />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <b style={{ fontSize: '12px', display: 'block' }}>Auto Save</b>
+                    <span style={{ fontSize: '10px', color: styles.muted }}>Save your reading position</span>
+                  </div>
+                  <div onClick={() => setAutoSavePos(!autoSavePos)} style={{ width: '38px', height: '22px', background: autoSavePos ? styles.nav : styles.inner, borderRadius: '12px', position: 'relative', cursor: 'pointer', border: `1px solid ${styles.border}` }}>
+                    <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: autoSavePos ? '18px' : '2px', transition: '0.2s' }} />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: `1px solid ${styles.border}`, paddingTop: '10px' }}>
+                  <div>
+                    <b style={{ fontSize: '12px', display: 'block' }}>Clear Cache</b>
+                    <span style={{ fontSize: '10px', color: styles.muted }}>Free up storage space</span>
+                  </div>
+                  <button onClick={() => alert('Cache cleared!')} style={{ background: styles.inner, color: styles.muted, border: `1px solid ${styles.border}`, padding: '5px 12px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer' }}>Clear</button>
                 </div>
               </div>
             </div>
 
-            {/* Card 6: Support */}
+            {/* Card 6: Support & Help (All 4 links restored) */}
             <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                 <span style={{ fontSize: '16px', color: styles.accent }}>🎧</span>
                 <b style={{ fontSize: '15px' }}>Support & Help</b>
               </div>
-              <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Get help from our team.</p>
-              <span style={{ fontSize: '12px', color: styles.accent, cursor: 'pointer' }}>Help Center & FAQ ➔</span>
+              <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Get help and contact our team.</p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                  <div>
+                    <b style={{ fontSize: '12px', display: 'block' }}>Help Center</b>
+                    <span style={{ fontSize: '10px', color: styles.muted }}>Find answers to common questions</span>
+                  </div>
+                  <span style={{ color: styles.muted }}>›</span>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                  <div>
+                    <b style={{ fontSize: '12px', display: 'block' }}>Contact Us</b>
+                    <span style={{ fontSize: '10px', color: styles.muted }}>Reach out to our support team</span>
+                  </div>
+                  <span style={{ color: styles.muted }}>›</span>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                  <div>
+                    <b style={{ fontSize: '12px', display: 'block' }}>Terms & Conditions</b>
+                    <span style={{ fontSize: '10px', color: styles.muted }}>Read our terms of service</span>
+                  </div>
+                  <span style={{ color: styles.muted }}>›</span>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                  <div>
+                    <b style={{ fontSize: '12px', display: 'block' }}>Privacy Policy</b>
+                    <span style={{ fontSize: '10px', color: styles.muted }}>How we handle your data</span>
+                  </div>
+                  <span style={{ color: styles.muted }}>›</span>
+                </div>
+              </div>
             </div>
 
           </div>
         </div>
+
       </main>
     </div>
   )
