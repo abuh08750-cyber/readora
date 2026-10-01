@@ -25,15 +25,38 @@ function hexToRgb(hex: string) {
   }
 }
 
+// Generate smart readable name from email if metadata is empty
+function formatNameFromEmail(email: string) {
+  if (!email) return 'Readora Reader'
+  const usernamePart = email.split('@')[0]
+  const clean = usernamePart.replace(/[0-9._-]+/g, ' ').trim()
+  if (!clean) return usernamePart
+  return clean
+    .split(' ')
+    .filter(Boolean)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
+}
+
+// Generate random unique username (e.g., huzaifa_8472)
+function generateSmartUsername(email: string, fullName: string) {
+  const base = (fullName || email.split('@')[0] || 'reader')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
+    .slice(0, 10)
+  const randomSuffix = Math.floor(1000 + Math.random() * 9000)
+  return `${base || 'reader'}_${randomSuffix}`
+}
+
 export default function SettingsPage() {
   const [user, setUser] = useState<any>(null)
   const [authChecking, setAuthChecking] = useState(true)
 
-  const [fullName, setFullName] = useState('Abu Huzaifa')
-  const [savedFullName, setSavedFullName] = useState('Abu Huzaifa')
-  const [emailVal, setEmailVal] = useState('waqasabu186@gmail.com')
-  const [username, setUsername] = useState('waqasabu186')
-  const [savedUsername, setSavedUsername] = useState('waqasabu186')
+  const [fullName, setFullName] = useState('')
+  const [savedFullName, setSavedFullName] = useState('')
+  const [emailVal, setEmailVal] = useState('')
+  const [username, setUsername] = useState('')
+  const [savedUsername, setSavedUsername] = useState('')
 
   const [savedSuccess, setSavedSuccess] = useState(false)
   const [headerAvatar, setHeaderAvatar] = useState<string | null>(null)
@@ -61,15 +84,43 @@ export default function SettingsPage() {
   const [syncProgress, setSyncProgress] = useState(true)
   const [autoSavePos, setAutoSavePos] = useState(true)
 
-  // Modal Open States
+  // Modals
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false)
-  const [isHelpCenterOpen, setIsHelpCenterOpen] = useState(false)
   const [isRecoveryFlow, setIsRecoveryFlow] = useState(false)
+  const [isHelpCenterOpen, setIsHelpCenterOpen] = useState(false)
   const [activeModal, setActiveModal] = useState<'none' | '2fa' | 'activity'>('none')
   const [is2FAEnabled, setIs2FAEnabled] = useState(false)
 
+  const setupUserProfile = (currentUser: any) => {
+    const userId = currentUser.id
+    const userEmail = currentUser.email || ''
+    const meta = currentUser.user_metadata || {}
+
+    // 1. Resolve Display Name (Facebook/Google metadata -> email -> fallback)
+    const detectedName = meta.full_name || meta.name || formatNameFromEmail(userEmail)
+    const storedName = localStorage.getItem(`readora_profile_fullname_${userId}`)
+    const finalName = storedName || detectedName
+
+    setFullName(finalName)
+    setSavedFullName(finalName)
+    setEmailVal(userEmail)
+
+    // 2. Resolve Username (Stored per user -> auto-generated)
+    let storedUsername = localStorage.getItem(`readora_profile_username_${userId}`)
+    if (!storedUsername) {
+      storedUsername = generateSmartUsername(userEmail, finalName)
+      localStorage.setItem(`readora_profile_username_${userId}`, storedUsername)
+    }
+    setUsername(storedUsername)
+    setSavedUsername(storedUsername)
+
+    // 3. Resolve Avatar (Facebook/Google picture -> uploaded photo)
+    const socialAvatar = meta.avatar_url || meta.picture || null
+    const storedAvatar = localStorage.getItem(`readora_profile_avatar_${userId}`)
+    setHeaderAvatar(storedAvatar || socialAvatar || null)
+  }
+
   useEffect(() => {
-    // 1. URL में रिकवरी टोकन (Password Reset Link) डिटेक्ट करें
     if (typeof window !== 'undefined') {
       const hash = window.location.hash
       if (hash && (hash.includes('type=recovery') || hash.includes('access_token='))) {
@@ -78,43 +129,36 @@ export default function SettingsPage() {
       }
     }
 
-    // 2. Supabase Session Check
     supabase.auth.getSession().then(({ data: { session } }) => {
-      // अगर रिकवरी टोकन आ रहा है, तो होम पर रीडायरेक्ट मत करो
       const isRecovery = typeof window !== 'undefined' && window.location.hash.includes('type=recovery')
       if (!session?.user && !isRecovery) {
-        window.location.href = '/'
+        window.location.replace('/')
         return
       }
       if (session?.user) {
         setUser(session.user)
-        if (session.user.email) setEmailVal(session.user.email)
+        setupUserProfile(session.user)
       }
       setAuthChecking(false)
     })
 
-    // 3. Supabase Auth State Change Listener (PASSWORD_RECOVERY इवेंट को पकड़ेगा)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
         setIsRecoveryFlow(true)
         setIsPasswordModalOpen(true)
         if (session?.user) setUser(session.user)
-      } else if (!session?.user) {
+      } else if (event === 'SIGNED_OUT' || !session?.user) {
         const isRecovery = typeof window !== 'undefined' && window.location.hash.includes('type=recovery')
-        if (!isRecovery) window.location.href = '/'
-      } else {
+        if (!isRecovery) {
+          window.location.replace('/')
+        }
+      } else if (session?.user) {
         setUser(session.user)
+        setupUserProfile(session.user)
       }
     })
 
     try {
-      const storedName = localStorage.getItem('readora_profile_fullname')
-      const storedUser = localStorage.getItem('readora_profile_username')
-      if (storedName) { setFullName(storedName); setSavedFullName(storedName); }
-      if (storedUser) { setUsername(storedUser); setSavedUsername(storedUser); }
-      const savedImg = localStorage.getItem('readora_profile_avatar')
-      if (savedImg) setHeaderAvatar(savedImg)
-
       const savedT = localStorage.getItem('readora_app_theme') as any
       if (savedT) setActiveTheme(savedT)
       const savedC = localStorage.getItem('readora_custom_color')
@@ -288,6 +332,7 @@ export default function SettingsPage() {
     setNameError('')
     setUsernameError('')
 
+    const userId = user?.id || 'guest'
     const now = Date.now()
     const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000
     const SIXTY_DAYS_MS = 60 * 24 * 60 * 60 * 1000
@@ -295,7 +340,7 @@ export default function SettingsPage() {
     let hasError = false
     let nameHistory: number[] = []
     try {
-      const storedHistory = localStorage.getItem('readora_name_change_history')
+      const storedHistory = localStorage.getItem(`readora_name_change_history_${userId}`)
       if (storedHistory) nameHistory = JSON.parse(storedHistory)
     } catch {}
 
@@ -311,7 +356,7 @@ export default function SettingsPage() {
 
     let userHistory: number[] = []
     try {
-      const stored = localStorage.getItem('readora_username_change_history')
+      const stored = localStorage.getItem(`readora_username_change_history_${userId}`)
       if (stored) userHistory = JSON.parse(stored)
     } catch {}
 
@@ -329,13 +374,13 @@ export default function SettingsPage() {
 
     try {
       if (isNameChanged) {
-        localStorage.setItem('readora_name_change_history', JSON.stringify([...recentNameChanges, now]))
-        localStorage.setItem('readora_profile_fullname', fullName.trim())
+        localStorage.setItem(`readora_name_change_history_${userId}`, JSON.stringify([...recentNameChanges, now]))
+        localStorage.setItem(`readora_profile_fullname_${userId}`, fullName.trim())
         setSavedFullName(fullName.trim())
       }
       if (isUserChanged) {
-        localStorage.setItem('readora_username_change_history', JSON.stringify([...recentUserChanges, now]))
-        localStorage.setItem('readora_profile_username', username.trim())
+        localStorage.setItem(`readora_username_change_history_${userId}`, JSON.stringify([...recentUserChanges, now]))
+        localStorage.setItem(`readora_profile_username_${userId}`, username.trim())
         setSavedUsername(username.trim())
       }
     } catch (err) {}
@@ -344,14 +389,20 @@ export default function SettingsPage() {
     setTimeout(() => setSavedSuccess(false), 2500)
   }
 
+  // Complete Global Logout
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut()
+      await supabase.auth.signOut({ scope: 'global' })
     } catch {}
+
     try {
-      localStorage.removeItem('readora_profile_avatar')
-      localStorage.removeItem('supabase.auth.token')
+      // Clear all cached tokens & sessions
+      sessionStorage.clear()
+      const keysToRemove = Object.keys(localStorage).filter(k => k.startsWith('sb-') || k.startsWith('supabase.') || k.startsWith('readora_profile_'))
+      keysToRemove.forEach(k => localStorage.removeItem(k))
     } catch {}
+
+    // Hard redirect to home and refresh auth state across all pages
     window.location.href = '/'
   }
 
@@ -363,7 +414,7 @@ export default function SettingsPage() {
     )
   }
 
-  const avatarChar = user?.email ? user.email.charAt(0).toUpperCase() : 'W'
+  const avatarChar = fullName ? fullName.charAt(0).toUpperCase() : (emailVal ? emailVal.charAt(0).toUpperCase() : 'R')
 
   return (
     <div style={{
@@ -375,7 +426,7 @@ export default function SettingsPage() {
       transition: 'all 0.25s ease'
     }}>
       
-      {/* Sidebar Navigation */}
+      {/* Sidebar */}
       <aside style={{
         width: '220px',
         background: styles.sidebar,
@@ -499,7 +550,7 @@ export default function SettingsPage() {
           {/* Cards Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '18px' }}>
             
-            {/* Card 1: Account Settings */}
+            {/* Card 1: Account Settings (Dynamic for Every User) */}
             <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                 <span style={{ fontSize: '16px', color: styles.accent }}>👤</span>
@@ -507,7 +558,13 @@ export default function SettingsPage() {
               </div>
               <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Update your personal information and account details.</p>
 
-              <ProfilePhotoUploader defaultChar={avatarChar} onPhotoChange={(p) => setHeaderAvatar(p)} />
+              <ProfilePhotoUploader
+                defaultChar={avatarChar}
+                onPhotoChange={(p) => {
+                  setHeaderAvatar(p)
+                  if (user?.id) localStorage.setItem(`readora_profile_avatar_${user.id}`, p)
+                }}
+              />
 
               <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div>
@@ -518,10 +575,11 @@ export default function SettingsPage() {
                   <input
                     type="text"
                     value={fullName}
+                    placeholder="Enter your name"
                     onChange={(e) => { setFullName(e.target.value); setNameError(''); }}
                     style={{ width: '100%', background: styles.inner, border: nameError ? '1px solid #ef4444' : `1px solid ${styles.border}`, borderRadius: '8px', padding: '8px 12px', color: styles.text, fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
                   />
-                  {nameError && <span style={{ color: '#ef4444', fontSize: '11px', marginTop: '4px', display: 'block' }}>⚠️️ {nameError}</span>}
+                  {nameError && <span style={{ color: '#ef4444', fontSize: '11px', marginTop: '4px', display: 'block' }}>⚠️ {nameError}</span>}
                 </div>
 
                 <div>
@@ -549,6 +607,7 @@ export default function SettingsPage() {
                   <input
                     type="text"
                     value={username}
+                    placeholder="Choose a username"
                     onChange={(e) => { setUsername(e.target.value); setUsernameError(''); }}
                     style={{ width: '100%', background: styles.inner, border: usernameError ? '1px solid #ef4444' : `1px solid ${styles.border}`, borderRadius: '8px', padding: '8px 12px', color: styles.text, fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
                   />
@@ -607,7 +666,6 @@ export default function SettingsPage() {
                   </select>
                 </div>
 
-                {/* Theme Pills */}
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                     <span style={{ fontSize: '11px', color: styles.muted }}>Theme Palette</span>
@@ -645,7 +703,6 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                {/* Custom Spectrum Wheel */}
                 {activeTheme === 'Custom' && (
                   <div style={{ background: styles.inner, border: `1px solid ${styles.border}`, borderRadius: '10px', padding: '10px 12px' }}>
                     <span style={{ fontSize: '11px', color: styles.muted, display: 'block', marginBottom: '6px' }}>Pick Custom Color:</span>
@@ -728,7 +785,6 @@ export default function SettingsPage() {
               <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Keep your account safe and secure.</p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {/* 1. Change Password Button */}
                 <div onClick={() => { setIsRecoveryFlow(false); setIsPasswordModalOpen(true); }} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '4px 0' }}>
                   <div>
                     <b style={{ fontSize: '12px', display: 'block' }}>Change Password</b>
@@ -737,7 +793,6 @@ export default function SettingsPage() {
                   <span style={{ color: styles.accent, fontWeight: 'bold' }}>›</span>
                 </div>
 
-                {/* 2. Two-Factor Authentication (2FA) */}
                 <div onClick={() => setActiveModal('2fa')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '4px 0' }}>
                   <div>
                     <b style={{ fontSize: '12px', display: 'block' }}>Two-Factor Authentication (2FA)</b>
@@ -746,7 +801,6 @@ export default function SettingsPage() {
                   <span style={{ color: styles.accent, fontWeight: 'bold' }}>›</span>
                 </div>
 
-                {/* 3. Login Activity */}
                 <div onClick={() => setActiveModal('activity')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '4px 0' }}>
                   <div>
                     <b style={{ fontSize: '12px', display: 'block' }}>Login Activity</b>
@@ -755,7 +809,6 @@ export default function SettingsPage() {
                   <span style={{ color: styles.accent, fontWeight: 'bold' }}>›</span>
                 </div>
 
-                {/* 4. Logout Account */}
                 <div onClick={handleLogout} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', borderTop: `1px solid ${styles.border}`, paddingTop: '10px' }}>
                   <div>
                     <b style={{ fontSize: '12px', display: 'block', color: '#ef4444' }}>Logout Account</b>
@@ -822,15 +875,17 @@ export default function SettingsPage() {
               <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Get help and contact our team.</p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {/* 1. Help Center Modal */}
                 <div onClick={() => setIsHelpCenterOpen(true)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
-  <div>
-    <b style={{ fontSize: '12px', display: 'block' }}>Help Center</b>
-    <span style={{ fontSize: '10px', color: styles.muted }}>Find answers to common questions</span>
-  </div>
-  <span style={{ color: styles.accent, fontWeight: 'bold' }}>›</span>
-</div>
-                
-                <div onClick={() => window.open('mailto:support@readora.app')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                  <div>
+                    <b style={{ fontSize: '12px', display: 'block' }}>Help Center</b>
+                    <span style={{ fontSize: '10px', color: styles.muted }}>Find answers to common questions</span>
+                  </div>
+                  <span style={{ color: styles.accent, fontWeight: 'bold' }}>›</span>
+                </div>
+
+                {/* 2. Contact Us */}
+                <div onClick={() => window.open('mailto:readora.support@gmail.com')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                   <div>
                     <b style={{ fontSize: '12px', display: 'block' }}>Contact Us</b>
                     <span style={{ fontSize: '10px', color: styles.muted }}>Reach out to our support team</span>
@@ -838,6 +893,7 @@ export default function SettingsPage() {
                   <span style={{ color: styles.muted }}>›</span>
                 </div>
 
+                {/* 3. Terms & Conditions */}
                 <div onClick={() => alert('Terms of Service: By using Readora, you agree to read responsibly and respect author copyrights.')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                   <div>
                     <b style={{ fontSize: '12px', display: 'block' }}>Terms & Conditions</b>
@@ -846,6 +902,7 @@ export default function SettingsPage() {
                   <span style={{ color: styles.muted }}>›</span>
                 </div>
 
+                {/* 4. Privacy Policy */}
                 <div onClick={() => alert('Privacy Policy: Readora respects your privacy. Your data is stored safely in Supabase with end-to-end security.')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                   <div>
                     <b style={{ fontSize: '12px', display: 'block' }}>Privacy Policy</b>
@@ -868,14 +925,15 @@ export default function SettingsPage() {
         userEmail={user?.email || emailVal}
         isRecoveryMode={isRecoveryFlow}
       />
-{/* Help Center Modal Component */}
-<HelpCenterModal
-  isOpen={isHelpCenterOpen}
-  onClose={() => setIsHelpCenterOpen(false)}
-  userEmail={user?.email || emailVal}
-/>
-      
-      {/* POPUP MODAL: Two-Factor Authentication (2FA) */}
+
+      {/* Help Center Modal */}
+      <HelpCenterModal
+        isOpen={isHelpCenterOpen}
+        onClose={() => setIsHelpCenterOpen(false)}
+        userEmail={user?.email || emailVal}
+      />
+
+      {/* 2FA Modal */}
       {activeModal === '2fa' && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
           <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '24px', maxWidth: '360px', width: '100%', position: 'relative' }}>
@@ -910,7 +968,7 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* POPUP MODAL: Login Activity */}
+      {/* Login Activity Modal */}
       {activeModal === 'activity' && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
           <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '24px', maxWidth: '380px', width: '100%', position: 'relative' }}>
@@ -936,4 +994,4 @@ export default function SettingsPage() {
 
     </div>
   )
-                             }
+      }
