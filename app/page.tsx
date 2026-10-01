@@ -108,12 +108,6 @@ export default function HomePage() {
     }
   }
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    setUser(null)
-    setReadingFile(null)
-  }
-
   const handleRead = async (book: any) => {
     if (!user) {
       setShowAuthModal(true)
@@ -145,6 +139,8 @@ export default function HomePage() {
     b.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     b.author?.toLowerCase().includes(searchQuery.toLowerCase())
   )
+
+  const avatarChar = user?.email ? user.email.charAt(0).toUpperCase() : 'W'
 
   if (readingFile && htmlData) {
     return (
@@ -179,12 +175,29 @@ export default function HomePage() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {user ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '13px', color: '#38bdf8', fontWeight: 'bold' }}>{user.email?.split('@')[0]}</span>
-              <button onClick={handleLogout} style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>
-                Logout
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => window.location.href = '/settings'}
+              style={{
+                width: '34px',
+                height: '34px',
+                borderRadius: '50%',
+                background: '#2563eb',
+                color: '#ffffff',
+                border: '2px solid rgba(255,255,255,0.25)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: '800',
+                fontSize: '13px',
+                cursor: 'pointer',
+                outline: 'none',
+                boxShadow: '0 2px 8px rgba(37,99,235,0.4)'
+              }}
+              title="Profile & Settings"
+            >
+              {avatarChar}
+            </button>
           ) : (
             <div style={{ display: 'flex', gap: '8px' }}>
               <button onClick={() => setShowAuthModal(true)} style={{ background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.15)', padding: '6px 14px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
