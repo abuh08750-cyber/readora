@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import ProfilePhotoUploader from '@/components/ProfilePhotoUploader'
+import NotificationDropdown from '@/components/NotificationDropdown'
 
 const SUPABASE_URL = 'https://stuabcdisgmmxprapfai.supabase.co'
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0dWFiY2Rpc2dtbXhwcmFwZmFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1Njc1NjksImV4cCI6MjEwNjE0MzU2OX0.pGvaQQBWGcbDKgDb_9F1jkUURVXH3bhJ-trQt-GXBZ8'
@@ -18,12 +19,11 @@ export default function SettingsPage() {
   const [emailVal, setEmailVal] = useState('waqasabu186@gmail.com')
   const [username, setUsername] = useState('waqasabu186')
   const [savedUsername, setSavedUsername] = useState('waqasabu186')
-  
+
   const [selectedTheme, setSelectedTheme] = useState('Dark')
   const [savedSuccess, setSavedSuccess] = useState(false)
   const [headerAvatar, setHeaderAvatar] = useState<string | null>(null)
 
-  // Validation Error Messages
   const [nameError, setNameError] = useState('')
   const [usernameError, setUsernameError] = useState('')
 
@@ -39,13 +39,10 @@ export default function SettingsPage() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser(session.user)
-        if (session.user.email) {
-          setEmailVal(session.user.email)
-        }
+        if (session.user.email) setEmailVal(session.user.email)
       }
     })
 
-    // Load saved Profile Name & Username from localStorage
     try {
       const storedName = localStorage.getItem('readora_profile_fullname')
       const storedUser = localStorage.getItem('readora_profile_username')
@@ -75,60 +72,48 @@ export default function SettingsPage() {
 
     let hasError = false
 
-    // 1. Check Full Name Rate Limit (Max 3 times in 30 days)
     let nameHistory: number[] = []
     try {
       const storedHistory = localStorage.getItem('readora_name_change_history')
       if (storedHistory) nameHistory = JSON.parse(storedHistory)
     } catch {}
 
-    // Filter to only changes within the last 30 days
     const recentNameChanges = nameHistory.filter(timestamp => now - timestamp < THIRTY_DAYS_MS)
-
     const isNameChanged = fullName.trim() !== savedFullName.trim()
-    if (isNameChanged) {
-      if (recentNameChanges.length >= 3) {
-        const oldestChange = Math.min(...recentNameChanges)
-        const daysLeft = Math.ceil((oldestChange + THIRTY_DAYS_MS - now) / (24 * 60 * 60 * 1000))
-        setNameError(`You can only change your name 3 times every 30 days. Please try again in ${daysLeft} days.`)
-        hasError = true
-      }
+
+    if (isNameChanged && recentNameChanges.length >= 3) {
+      const oldestChange = Math.min(...recentNameChanges)
+      const daysLeft = Math.ceil((oldestChange + THIRTY_DAYS_MS - now) / (24 * 60 * 60 * 1000))
+      setNameError(`You can only change your name 3 times every 30 days. Please try again in ${daysLeft} days.`)
+      hasError = true
     }
 
-    // 2. Check Username Rate Limit (Max 3 times in 60 days / 2 months)
     let usernameHistory: number[] = []
     try {
       const storedUserHistory = localStorage.getItem('readora_username_change_history')
       if (storedUserHistory) usernameHistory = JSON.parse(storedUserHistory)
     } catch {}
 
-    // Filter to only changes within the last 60 days
     const recentUserChanges = usernameHistory.filter(timestamp => now - timestamp < SIXTY_DAYS_MS)
-
     const isUsernameChanged = username.trim() !== savedUsername.trim()
-    if (isUsernameChanged) {
-      if (recentUserChanges.length >= 3) {
-        const oldestUserChange = Math.min(...recentUserChanges)
-        const daysLeft = Math.ceil((oldestUserChange + SIXTY_DAYS_MS - now) / (24 * 60 * 60 * 1000))
-        setUsernameError(`You can only change your username 3 times every 60 days (2 months). Please try again in ${daysLeft} days.`)
-        hasError = true
-      }
+
+    if (isUsernameChanged && recentUserChanges.length >= 3) {
+      const oldestUserChange = Math.min(...recentUserChanges)
+      const daysLeft = Math.ceil((oldestUserChange + SIXTY_DAYS_MS - now) / (24 * 60 * 60 * 1000))
+      setUsernameError(`You can only change your username 3 times every 60 days (2 months). Please try again in ${daysLeft} days.`)
+      hasError = true
     }
 
     if (hasError) return
 
-    // 3. Save updates permanently to localStorage
     try {
       if (isNameChanged) {
-        const updatedNameHistory = [...recentNameChanges, now]
-        localStorage.setItem('readora_name_change_history', JSON.stringify(updatedNameHistory))
+        localStorage.setItem('readora_name_change_history', JSON.stringify([...recentNameChanges, now]))
         localStorage.setItem('readora_profile_fullname', fullName.trim())
         setSavedFullName(fullName.trim())
       }
-
       if (isUsernameChanged) {
-        const updatedUserHistory = [...recentUserChanges, now]
-        localStorage.setItem('readora_username_change_history', JSON.stringify(updatedUserHistory))
+        localStorage.setItem('readora_username_change_history', JSON.stringify([...recentUserChanges, now]))
         localStorage.setItem('readora_profile_username', username.trim())
         setSavedUsername(username.trim())
       }
@@ -181,7 +166,7 @@ export default function SettingsPage() {
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflowY: 'auto' }}>
         
         {/* Top Header */}
-        <header style={{ padding: '14px 24px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, background: '#070b14', zIndex: 30 }}>
+        <header style={{ padding: '14px 24px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, background: '#070b14', zIndex: 100 }}>
           <div style={{ position: 'relative', width: '320px', maxWidth: '65%' }}>
             <span style={{ position: 'absolute', left: '10px', top: '8px', color: '#64748b', fontSize: '13px' }}>🔍</span>
             <input
@@ -191,9 +176,13 @@ export default function SettingsPage() {
             />
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <span style={{ color: '#94a3b8', cursor: 'pointer', fontSize: '16px' }}>☀️</span>
-            <span style={{ color: '#94a3b8', cursor: 'pointer', fontSize: '16px' }}>🔔</span>
+
+            {/* Separate Modular Notification Dropdown */}
+            <NotificationDropdown />
+
+            {/* Profile Avatar */}
             <div style={{
               width: '34px',
               height: '34px',
@@ -247,15 +236,12 @@ export default function SettingsPage() {
               </div>
               <p style={{ color: '#64748b', fontSize: '11px', margin: '0 0 16px' }}>Update your personal information and account details.</p>
 
-              {/* Photo Uploader */}
               <ProfilePhotoUploader
                 defaultChar={avatarChar}
                 onPhotoChange={(newPhoto) => setHeaderAvatar(newPhoto)}
               />
 
               <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                
-                {/* Full Name Field */}
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                     <span style={{ fontSize: '11px', color: '#94a3b8' }}>Full Name</span>
@@ -274,7 +260,6 @@ export default function SettingsPage() {
                   )}
                 </div>
 
-                {/* Email Address Field (LOCKED 🔒) */}
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                     <span style={{ fontSize: '11px', color: '#94a3b8' }}>Email Address</span>
@@ -306,7 +291,6 @@ export default function SettingsPage() {
                   </span>
                 </div>
 
-                {/* Username Field */}
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                     <span style={{ fontSize: '11px', color: '#94a3b8' }}>Username</span>
@@ -337,7 +321,6 @@ export default function SettingsPage() {
                     fontWeight: 'bold',
                     fontSize: '12px',
                     cursor: 'pointer',
-                    transition: '0.2s',
                   }}
                 >
                   {savedSuccess ? '✓ Saved Successfully' : 'Save Changes'}
@@ -601,4 +584,4 @@ export default function SettingsPage() {
       </main>
     </div>
   )
-              }
+                           }
