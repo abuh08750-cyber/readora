@@ -6,6 +6,7 @@ import ProfilePhotoUploader from '@/components/ProfilePhotoUploader'
 import NotificationDropdown from '@/components/NotificationDropdown'
 import ChangePasswordModal from '@/components/ChangePasswordModal'
 import HelpCenterModal from '@/components/HelpCenterModal'
+import TermsConditionsView from '@/components/TermsConditionsView'
 
 const SUPABASE_URL = 'https://stuabcdisgmmxprapfai.supabase.co'
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0dWFiY2Rpc2dtbXhwcmFwZmFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1Njc1NjksImV4cCI6MjEwNjE0MzU2OX0.pGvaQQBWGcbDKgDb_9F1jkUURVXH3bhJ-trQt-GXBZ8'
@@ -60,6 +61,9 @@ export default function SettingsPage() {
 
   const [savedSuccess, setSavedSuccess] = useState(false)
   const [headerAvatar, setHeaderAvatar] = useState<string | null>(null)
+
+  // Subview State: 'settings' ya 'terms'
+  const [currentView, setCurrentView] = useState<'settings' | 'terms'>('settings')
 
   // Theme Settings
   const [activeTheme, setActiveTheme] = useState<'Dark' | 'Light' | 'Sepia' | 'Custom'>('Dark')
@@ -118,7 +122,7 @@ export default function SettingsPage() {
     const socialAvatar = meta.avatar_url || meta.picture || null
     const storedAvatar = localStorage.getItem(`readora_profile_avatar_${userId}`)
     setHeaderAvatar(storedAvatar || socialAvatar || null)
-  }
+                             }
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -240,7 +244,7 @@ export default function SettingsPage() {
         autoSavePos: nextAutoSave,
       }))
     } catch (e) {}
-  }
+    }
 
   const styles = (() => {
     if (activeTheme === 'Light') {
@@ -412,7 +416,7 @@ export default function SettingsPage() {
         Verifying session...
       </div>
     )
-  }
+    }
 
   const avatarChar = fullName ? fullName.charAt(0).toUpperCase() : (emailVal ? emailVal.charAt(0).toUpperCase() : 'R')
 
@@ -450,7 +454,12 @@ export default function SettingsPage() {
             <div onClick={() => window.location.href = '/library'} style={{ padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', color: styles.muted }}>📑 My Books</div>
             <div onClick={() => window.location.href = '/library'} style={{ padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', color: styles.muted }}>🕒 Recently Read</div>
             <div onClick={() => window.location.href = '/library'} style={{ padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', color: styles.muted }}>🤍 Favorites</div>
-            <div style={{ padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', color: '#fff', background: styles.nav, fontWeight: 'bold' }}>⚙️ Settings</div>
+            <div
+              onClick={() => setCurrentView('settings')}
+              style={{ padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', color: '#fff', background: styles.nav, fontWeight: 'bold' }}
+            >
+              ⚙️ Settings
+            </div>
           </nav>
         </div>
 
@@ -521,399 +530,415 @@ export default function SettingsPage() {
         {/* Content Dashboard */}
         <div style={{ padding: '24px 28px 60px', maxWidth: '1280px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
           
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontSize: '24px', color: styles.accent }}>⚙️</span>
-                <h1 style={{ fontSize: '26px', fontWeight: '800', margin: 0, letterSpacing: '-0.3px' }}>Settings</h1>
-              </div>
-              <p style={{ color: styles.muted, fontSize: '13px', margin: '4px 0 0' }}>Manage your account, preferences and app settings.</p>
-            </div>
-
-            <div style={{
-              background: styles.card,
-              border: `1px solid ${styles.border}`,
-              borderRadius: '12px',
-              padding: '12px 18px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px'
-            }}>
-              <span style={{ fontSize: '22px' }}>📖</span>
-              <div>
-                <b style={{ fontSize: '13px', color: styles.text, display: 'block' }}>Read. Learn. Grow.</b>
-                <span style={{ fontSize: '11px', color: styles.muted }}>Your reading journey, your control.</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Cards Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '18px' }}>
-            
-            {/* Card 1: Account Settings (Dynamic for Every User) */}
-            <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <span style={{ fontSize: '16px', color: styles.accent }}>👤</span>
-                <b style={{ fontSize: '15px' }}>Account Settings</b>
-              </div>
-              <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Update your personal information and account details.</p>
-
-              <ProfilePhotoUploader
-                defaultChar={avatarChar}
-                onPhotoChange={(p) => {
-                  setHeaderAvatar(p)
-                  if (user?.id) localStorage.setItem(`readora_profile_avatar_${user.id}`, p)
-                }}
-              />
-
-              <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {currentView === 'terms' ? (
+            /* ================= DEDICATED TERMS & CONDITIONS VIEW ================= */
+            <TermsConditionsView
+              onBack={() => setCurrentView('settings')}
+              onOpenSupport={() => setIsHelpCenterOpen(true)}
+              onOpenPrivacy={() => alert('Privacy Policy: Readora respects and protects your data privacy via encrypted Supabase storage.')}
+              styles={styles}
+            />
+          ) : (
+            /* ================= REGULAR SETTINGS VIEW ================= */
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '11px', color: styles.muted }}>Full Name</span>
-                    <span style={{ fontSize: '10px', color: styles.muted }}>Max 3 edits / 30 days</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '24px', color: styles.accent }}>⚙️</span>
+                    <h1 style={{ fontSize: '26px', fontWeight: '800', margin: 0, letterSpacing: '-0.3px' }}>Settings</h1>
                   </div>
-                  <input
-                    type="text"
-                    value={fullName}
-                    placeholder="Enter your name"
-                    onChange={(e) => { setFullName(e.target.value); setNameError(''); }}
-                    style={{ width: '100%', background: styles.inner, border: nameError ? '1px solid #ef4444' : `1px solid ${styles.border}`, borderRadius: '8px', padding: '8px 12px', color: styles.text, fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
+                  <p style={{ color: styles.muted, fontSize: '13px', margin: '4px 0 0' }}>Manage your account, preferences and app settings.</p>
+                </div>
+
+                <div style={{
+                  background: styles.card,
+                  border: `1px solid ${styles.border}`,
+                  borderRadius: '12px',
+                  padding: '12px 18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px'
+                }}>
+                  <span style={{ fontSize: '22px' }}>📖</span>
+                  <div>
+                    <b style={{ fontSize: '13px', color: styles.text, display: 'block' }}>Read. Learn. Grow.</b>
+                    <span style={{ fontSize: '11px', color: styles.muted }}>Your reading journey, your control.</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Cards Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '18px' }}>
+                
+                {/* Card 1: Account Settings (Dynamic for Every User) */}
+                <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '16px', color: styles.accent }}>👤</span>
+                    <b style={{ fontSize: '15px' }}>Account Settings</b>
+                  </div>
+                  <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Update your personal information and account details.</p>
+
+                  <ProfilePhotoUploader
+                    defaultChar={avatarChar}
+                    onPhotoChange={(p) => {
+                      setHeaderAvatar(p)
+                      if (user?.id) localStorage.setItem(`readora_profile_avatar_${user.id}`, p)
+                    }}
                   />
-                  {nameError && <span style={{ color: '#ef4444', fontSize: '11px', marginTop: '4px', display: 'block' }}>⚠️ {nameError}</span>}
-                </div>
 
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '11px', color: styles.muted }}>Email Address</span>
-                    <span style={{ fontSize: '10px', color: styles.accent, fontWeight: 'bold' }}>🔒 Locked</span>
-                  </div>
-                  <div style={{ position: 'relative' }}>
-                    <input
-                      type="email"
-                      value={emailVal}
-                      readOnly
-                      disabled
-                      style={{ width: '100%', background: styles.inner, border: `1px solid ${styles.border}`, borderRadius: '8px', padding: '8px 32px 8px 12px', color: styles.muted, fontSize: '12px', outline: 'none', boxSizing: 'border-box', cursor: 'not-allowed', opacity: 0.7 }}
-                    />
-                    <span style={{ position: 'absolute', right: '10px', top: '8px', fontSize: '12px', opacity: 0.6 }}>🔒</span>
-                  </div>
-                </div>
-
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '11px', color: styles.muted }}>Username</span>
-                    <span style={{ fontSize: '10px', color: styles.muted }}>Max 3 edits / 60 days</span>
-                  </div>
-                  <input
-                    type="text"
-                    value={username}
-                    placeholder="Choose a username"
-                    onChange={(e) => { setUsername(e.target.value); setUsernameError(''); }}
-                    style={{ width: '100%', background: styles.inner, border: usernameError ? '1px solid #ef4444' : `1px solid ${styles.border}`, borderRadius: '8px', padding: '8px 12px', color: styles.text, fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
-                  />
-                  {usernameError && <span style={{ color: '#ef4444', fontSize: '11px', marginTop: '4px', display: 'block' }}>⚠️ {usernameError}</span>}
-                </div>
-
-                <button type="submit" style={{ marginTop: '8px', background: styles.nav, color: '#fff', border: 'none', padding: '9px', borderRadius: '8px', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}>
-                  {savedSuccess ? '✓ Saved Successfully' : 'Save Changes'}
-                </button>
-              </form>
-            </div>
-
-            {/* Card 2: Reading Preferences */}
-            <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <span style={{ fontSize: '16px', color: styles.accent }}>📖</span>
-                <b style={{ fontSize: '15px' }}>Reading Preferences</b>
-              </div>
-              <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Customize your reading experience.</p>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div>
-                  <span style={{ fontSize: '11px', color: styles.muted, display: 'block', marginBottom: '4px' }}>Default Reading Mode</span>
-                  <select
-                    value={readingMode}
-                    onChange={(e) => { setReadingMode(e.target.value); saveReadingPrefs({ mode: e.target.value }); }}
-                    style={{ width: '100%', background: styles.inner, border: `1px solid ${styles.border}`, borderRadius: '8px', padding: '8px 12px', color: styles.text, fontSize: '12px', outline: 'none' }}
-                  >
-                    <option>Dark Mode</option>
-                    <option>Light Mode</option>
-                  </select>
-                </div>
-
-                <div>
-                  <span style={{ fontSize: '11px', color: styles.muted, display: 'block', marginBottom: '4px' }}>Font Size</span>
-                  <select
-                    value={fontSize}
-                    onChange={(e) => { setFontSize(e.target.value); saveReadingPrefs({ font: e.target.value }); }}
-                    style={{ width: '100%', background: styles.inner, border: `1px solid ${styles.border}`, borderRadius: '8px', padding: '8px 12px', color: styles.text, fontSize: '12px', outline: 'none' }}
-                  >
-                    <option>Small</option>
-                    <option>Medium</option>
-                    <option>Large</option>
-                  </select>
-                </div>
-
-                <div>
-                  <span style={{ fontSize: '11px', color: styles.muted, display: 'block', marginBottom: '4px' }}>Line Spacing</span>
-                  <select
-                    value={lineSpacing}
-                    onChange={(e) => { setLineSpacing(e.target.value); saveReadingPrefs({ line: e.target.value }); }}
-                    style={{ width: '100%', background: styles.inner, border: `1px solid ${styles.border}`, borderRadius: '8px', padding: '8px 12px', color: styles.text, fontSize: '12px', outline: 'none' }}
-                  >
-                    <option>Normal</option>
-                    <option>Relaxed</option>
-                  </select>
-                </div>
-
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <span style={{ fontSize: '11px', color: styles.muted }}>Theme Palette</span>
-                    <span style={{ fontSize: '10px', color: styles.accent, fontWeight: 'bold' }}>Active: {activeTheme}</span>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
-                    {[
-                      { name: 'Dark', bg: '#0b1329', text: '#fff' },
-                      { name: 'Light', bg: '#ffffff', text: '#000' },
-                      { name: 'Sepia', bg: '#fef3c7', text: '#78350f' },
-                      { name: 'Custom', bg: customHex, text: '#fff' },
-                    ].map((t) => (
-                      <button
-                        key={t.name}
-                        type="button"
-                        onClick={() => switchTheme(t.name as any)}
-                        style={{
-                          background: t.bg,
-                          color: t.text,
-                          border: activeTheme === t.name ? '2px solid #ffffff' : `1px solid ${styles.border}`,
-                          borderRadius: '8px',
-                          padding: '12px 4px',
-                          textAlign: 'center',
-                          fontSize: '11px',
-                          fontWeight: 'bold',
-                          cursor: 'pointer',
-                          boxShadow: activeTheme === t.name ? '0 0 10px rgba(0,0,0,0.3)' : 'none',
-                          transform: activeTheme === t.name ? 'scale(1.05)' : 'scale(1)',
-                          transition: '0.2s'
-                        }}
-                      >
-                        {t.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {activeTheme === 'Custom' && (
-                  <div style={{ background: styles.inner, border: `1px solid ${styles.border}`, borderRadius: '10px', padding: '10px 12px' }}>
-                    <span style={{ fontSize: '11px', color: styles.muted, display: 'block', marginBottom: '6px' }}>Pick Custom Color:</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <input
-                        type="color"
-                        value={customHex}
-                        onChange={(e) => changeCustomColor(e.target.value)}
-                        style={{ width: '40px', height: '40px', borderRadius: '50%', border: 'none', cursor: 'pointer', background: 'none' }}
-                      />
+                  <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '11px', color: styles.muted }}>Full Name</span>
+                        <span style={{ fontSize: '10px', color: styles.muted }}>Max 3 edits / 30 days</span>
+                      </div>
                       <input
                         type="text"
-                        value={customHex.toUpperCase()}
-                        onChange={(e) => changeCustomColor(e.target.value)}
-                        style={{ flex: 1, background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '6px', padding: '6px 10px', color: styles.text, fontSize: '12px', fontWeight: 'bold' }}
+                        value={fullName}
+                        placeholder="Enter your name"
+                        onChange={(e) => { setFullName(e.target.value); setNameError(''); }}
+                        style={{ width: '100%', background: styles.inner, border: nameError ? '1px solid #ef4444' : `1px solid ${styles.border}`, borderRadius: '8px', padding: '8px 12px', color: styles.text, fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
                       />
+                      {nameError && <span style={{ color: '#ef4444', fontSize: '11px', marginTop: '4px', display: 'block' }}>⚠️ {nameError}</span>}
+                    </div>
+
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '11px', color: styles.muted }}>Email Address</span>
+                        <span style={{ fontSize: '10px', color: styles.accent, fontWeight: 'bold' }}>🔒 Locked</span>
+                      </div>
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type="email"
+                          value={emailVal}
+                          readOnly
+                          disabled
+                          style={{ width: '100%', background: styles.inner, border: `1px solid ${styles.border}`, borderRadius: '8px', padding: '8px 32px 8px 12px', color: styles.muted, fontSize: '12px', outline: 'none', boxSizing: 'border-box', cursor: 'not-allowed', opacity: 0.7 }}
+                        />
+                        <span style={{ position: 'absolute', right: '10px', top: '8px', fontSize: '12px', opacity: 0.6 }}>🔒</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '11px', color: styles.muted }}>Username</span>
+                        <span style={{ fontSize: '10px', color: styles.muted }}>Max 3 edits / 60 days</span>
+                      </div>
+                      <input
+                        type="text"
+                        value={username}
+                        placeholder="Choose a username"
+                        onChange={(e) => { setUsername(e.target.value); setUsernameError(''); }}
+                        style={{ width: '100%', background: styles.inner, border: usernameError ? '1px solid #ef4444' : `1px solid ${styles.border}`, borderRadius: '8px', padding: '8px 12px', color: styles.text, fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
+                      />
+                      {usernameError && <span style={{ color: '#ef4444', fontSize: '11px', marginTop: '4px', display: 'block' }}>⚠️ {usernameError}</span>}
+                    </div>
+
+                    <button type="submit" style={{ marginTop: '8px', background: styles.nav, color: '#fff', border: 'none', padding: '9px', borderRadius: '8px', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}>
+                      {savedSuccess ? '✓ Saved Successfully' : 'Save Changes'}
+                    </button>
+                  </form>
+                </div>
+
+                {/* Card 2: Reading Preferences */}
+                <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '16px', color: styles.accent }}>📖</span>
+                    <b style={{ fontSize: '15px' }}>Reading Preferences</b>
+                  </div>
+                  <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Customize your reading experience.</p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div>
+                      <span style={{ fontSize: '11px', color: styles.muted, display: 'block', marginBottom: '4px' }}>Default Reading Mode</span>
+                      <select
+                        value={readingMode}
+                        onChange={(e) => { setReadingMode(e.target.value); saveReadingPrefs({ mode: e.target.value }); }}
+                        style={{ width: '100%', background: styles.inner, border: `1px solid ${styles.border}`, borderRadius: '8px', padding: '8px 12px', color: styles.text, fontSize: '12px', outline: 'none' }}
+                      >
+                        <option>Dark Mode</option>
+                        <option>Light Mode</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <span style={{ fontSize: '11px', color: styles.muted, display: 'block', marginBottom: '4px' }}>Font Size</span>
+                      <select
+                        value={fontSize}
+                        onChange={(e) => { setFontSize(e.target.value); saveReadingPrefs({ font: e.target.value }); }}
+                        style={{ width: '100%', background: styles.inner, border: `1px solid ${styles.border}`, borderRadius: '8px', padding: '8px 12px', color: styles.text, fontSize: '12px', outline: 'none' }}
+                      >
+                        <option>Small</option>
+                        <option>Medium</option>
+                        <option>Large</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <span style={{ fontSize: '11px', color: styles.muted, display: 'block', marginBottom: '4px' }}>Line Spacing</span>
+                      <select
+                        value={lineSpacing}
+                        onChange={(e) => { setLineSpacing(e.target.value); saveReadingPrefs({ line: e.target.value }); }}
+                        style={{ width: '100%', background: styles.inner, border: `1px solid ${styles.border}`, borderRadius: '8px', padding: '8px 12px', color: styles.text, fontSize: '12px', outline: 'none' }}
+                      >
+                        <option>Normal</option>
+                        <option>Relaxed</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                        <span style={{ fontSize: '11px', color: styles.muted }}>Theme Palette</span>
+                        <span style={{ fontSize: '10px', color: styles.accent, fontWeight: 'bold' }}>Active: {activeTheme}</span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                        {[
+                          { name: 'Dark', bg: '#0b1329', text: '#fff' },
+                          { name: 'Light', bg: '#ffffff', text: '#000' },
+                          { name: 'Sepia', bg: '#fef3c7', text: '#78350f' },
+                          { name: 'Custom', bg: customHex, text: '#fff' },
+                        ].map((t) => (
+                          <button
+                            key={t.name}
+                            type="button"
+                            onClick={() => switchTheme(t.name as any)}
+                            style={{
+                              background: t.bg,
+                              color: t.text,
+                              border: activeTheme === t.name ? '2px solid #ffffff' : `1px solid ${styles.border}`,
+                              borderRadius: '8px',
+                              padding: '12px 4px',
+                              textAlign: 'center',
+                              fontSize: '11px',
+                              fontWeight: 'bold',
+                              cursor: 'pointer',
+                              boxShadow: activeTheme === t.name ? '0 0 10px rgba(0,0,0,0.3)' : 'none',
+                              transform: activeTheme === t.name ? 'scale(1.05)' : 'scale(1)',
+                              transition: '0.2s'
+                            }}
+                          >
+                            {t.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {activeTheme === 'Custom' && (
+                      <div style={{ background: styles.inner, border: `1px solid ${styles.border}`, borderRadius: '10px', padding: '10px 12px' }}>
+                        <span style={{ fontSize: '11px', color: styles.muted, display: 'block', marginBottom: '6px' }}>Pick Custom Color:</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <input
+                            type="color"
+                            value={customHex}
+                            onChange={(e) => changeCustomColor(e.target.value)}
+                            style={{ width: '40px', height: '40px', borderRadius: '50%', border: 'none', cursor: 'pointer', background: 'none' }}
+                          />
+                          <input
+                            type="text"
+                            value={customHex.toUpperCase()}
+                            onChange={(e) => changeCustomColor(e.target.value)}
+                            style={{ flex: 1, background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '6px', padding: '6px 10px', color: styles.text, fontSize: '12px', fontWeight: 'bold' }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Card 3: Notifications */}
+                <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '16px', color: styles.accent }}>🔔</span>
+                    <b style={{ fontSize: '15px' }}>Notifications</b>
+                  </div>
+                  <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Get notified about new books and updates.</p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <b style={{ fontSize: '12px', display: 'block' }}>New Book Releases</b>
+                        <span style={{ fontSize: '10px', color: styles.muted }}>Be the first to know about new arrivals</span>
+                      </div>
+                      <div onClick={() => toggleNotification('releases')} style={{ width: '38px', height: '22px', background: notifReleases ? styles.nav : styles.inner, borderRadius: '12px', position: 'relative', cursor: 'pointer', border: `1px solid ${styles.border}`, transition: '0.2s' }}>
+                        <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: notifReleases ? '18px' : '2px', transition: '0.2s' }} />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <b style={{ fontSize: '12px', display: 'block' }}>Reading Reminders</b>
+                        <span style={{ fontSize: '10px', color: styles.muted }}>Daily/weekly reading goals</span>
+                      </div>
+                      <div onClick={() => toggleNotification('reminders')} style={{ width: '38px', height: '22px', background: notifReminders ? styles.nav : styles.inner, borderRadius: '12px', position: 'relative', cursor: 'pointer', border: `1px solid ${styles.border}`, transition: '0.2s' }}>
+                        <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: notifReminders ? '18px' : '2px', transition: '0.2s' }} />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <b style={{ fontSize: '12px', display: 'block' }}>Comments & Replies</b>
+                        <span style={{ fontSize: '10px', color: styles.muted }}>Get notified about your activity</span>
+                      </div>
+                      <div onClick={() => toggleNotification('replies')} style={{ width: '38px', height: '22px', background: notifReplies ? styles.nav : styles.inner, borderRadius: '12px', position: 'relative', cursor: 'pointer', border: `1px solid ${styles.border}`, transition: '0.2s' }}>
+                        <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: notifReplies ? '18px' : '2px', transition: '0.2s' }} />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <b style={{ fontSize: '12px', display: 'block' }}>Marketing & Updates</b>
+                        <span style={{ fontSize: '10px', color: styles.muted }}>Product updates, offers and news</span>
+                      </div>
+                      <div onClick={() => toggleNotification('marketing')} style={{ width: '38px', height: '22px', background: notifMarketing ? styles.nav : styles.inner, borderRadius: '12px', position: 'relative', cursor: 'pointer', border: `1px solid ${styles.border}`, transition: '0.2s' }}>
+                        <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: notifMarketing ? '18px' : '2px', transition: '0.2s' }} />
+                      </div>
                     </div>
                   </div>
-                )}
+                </div>
+
+                {/* Card 4: Privacy & Security */}
+                <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '16px', color: styles.accent }}>🛡️</span>
+                    <b style={{ fontSize: '15px' }}>Privacy & Security</b>
+                  </div>
+                  <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Keep your account safe and secure.</p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div onClick={() => { setIsRecoveryFlow(false); setIsPasswordModalOpen(true); }} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '4px 0' }}>
+                      <div>
+                        <b style={{ fontSize: '12px', display: 'block' }}>Change Password</b>
+                        <span style={{ fontSize: '10px', color: styles.muted }}>Update your password regularly</span>
+                      </div>
+                      <span style={{ color: styles.accent, fontWeight: 'bold' }}>›</span>
+                    </div>
+
+                    <div onClick={() => setActiveModal('2fa')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '4px 0' }}>
+                      <div>
+                        <b style={{ fontSize: '12px', display: 'block' }}>Two-Factor Authentication (2FA)</b>
+                        <span style={{ fontSize: '10px', color: styles.muted }}>Add an extra layer of security</span>
+                      </div>
+                      <span style={{ color: styles.accent, fontWeight: 'bold' }}>›</span>
+                    </div>
+
+                    <div onClick={() => setActiveModal('activity')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '4px 0' }}>
+                      <div>
+                        <b style={{ fontSize: '12px', display: 'block' }}>Login Activity</b>
+                        <span style={{ fontSize: '10px', color: styles.muted }}>View recent login sessions</span>
+                      </div>
+                      <span style={{ color: styles.accent, fontWeight: 'bold' }}>›</span>
+                    </div>
+
+                    <div onClick={handleLogout} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', borderTop: `1px solid ${styles.border}`, paddingTop: '10px' }}>
+                      <div>
+                        <b style={{ fontSize: '12px', display: 'block', color: '#ef4444' }}>Logout Account</b>
+                        <span style={{ fontSize: '10px', color: styles.muted }}>Sign out permanently from this device</span>
+                      </div>
+                      <span style={{ color: '#ef4444' }}>🚪</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card 5: Library Settings */}
+                <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '16px', color: styles.accent }}>📚</span>
+                    <b style={{ fontSize: '15px' }}>Library Settings</b>
+                  </div>
+                  <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Manage your library and reading data.</p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <div onClick={() => window.location.href = '/library'} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                      <div>
+                        <b style={{ fontSize: '12px', display: 'block' }}>Download History</b>
+                        <span style={{ fontSize: '10px', color: styles.muted }}>View your downloaded books</span>
+                      </div>
+                      <span style={{ color: styles.muted }}>›</span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <b style={{ fontSize: '12px', display: 'block' }}>Reading Progress</b>
+                        <span style={{ fontSize: '10px', color: styles.muted }}>Sync across devices</span>
+                      </div>
+                      <div onClick={() => toggleLibrarySetting('sync')} style={{ width: '38px', height: '22px', background: syncProgress ? styles.nav : styles.inner, borderRadius: '12px', position: 'relative', cursor: 'pointer', border: `1px solid ${styles.border}`, transition: '0.2s' }}>
+                        <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: syncProgress ? '18px' : '2px', transition: '0.2s' }} />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: `1px solid ${styles.border}`, paddingTop: '10px' }}>
+                      <div>
+                        <b style={{ fontSize: '12px', display: 'block' }}>Clear Cache</b>
+                        <span style={{ fontSize: '10px', color: styles.muted }}>Free up storage space</span>
+                      </div>
+                      <button onClick={() => alert('Cache cleared successfully!')} style={{ background: styles.inner, color: styles.muted, border: `1px solid ${styles.border}`, padding: '5px 12px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer' }}>Clear</button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card 6: Support & Help */}
+                <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '16px', color: styles.accent }}>🎧</span>
+                    <b style={{ fontSize: '15px' }}>Support & Help</b>
+                  </div>
+                  <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Get help and contact our team.</p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {/* 1. Help Center Modal */}
+                    <div onClick={() => setIsHelpCenterOpen(true)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                      <div>
+                        <b style={{ fontSize: '12px', display: 'block' }}>Help Center</b>
+                        <span style={{ fontSize: '10px', color: styles.muted }}>Find answers to common questions</span>
+                      </div>
+                      <span style={{ color: styles.accent, fontWeight: 'bold' }}>›</span>
+                    </div>
+
+                    {/* 2. Contact Us */}
+                    <div onClick={() => window.open('mailto:readora.support@gmail.com')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                      <div>
+                        <b style={{ fontSize: '12px', display: 'block' }}>Contact Us</b>
+                        <span style={{ fontSize: '10px', color: styles.muted }}>Reach out to our support team</span>
+                      </div>
+                      <span style={{ color: styles.muted }}>›</span>
+                    </div>
+
+                    {/* 3. Terms & Conditions -> OPENS FULL PAGE COMPONENT */}
+                    <div
+                      onClick={() => setCurrentView('terms')}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        cursor: 'pointer',
+                        background: 'rgba(56, 189, 248, 0.08)',
+                        padding: '8px 10px',
+                        borderRadius: '10px',
+                        border: '1px solid rgba(56, 189, 248, 0.2)'
+                      }}
+                    >
+                      <div>
+                        <b style={{ fontSize: '12px', display: 'block', color: styles.accent }}>📜 Terms & Conditions</b>
+                        <span style={{ fontSize: '10px', color: styles.muted }}>Read our comprehensive terms of service</span>
+                      </div>
+                      <span style={{ color: styles.accent, fontWeight: 'bold' }}>View ›</span>
+                    </div>
+
+                    {/* 4. Privacy Policy */}
+                    <div onClick={() => alert('Privacy Policy: Readora respects your privacy. Your data is stored safely in Supabase with end-to-end security.')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                      <div>
+                        <b style={{ fontSize: '12px', display: 'block' }}>Privacy Policy</b>
+                        <span style={{ fontSize: '10px', color: styles.muted }}>How we handle your data</span>
+                      </div>
+                      <span style={{ color: styles.muted }}>›</span>
+                    </div>
+                  </div>
+                </div>
+
               </div>
-            </div>
+            </>
+          )}
 
-            {/* Card 3: Notifications */}
-            <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <span style={{ fontSize: '16px', color: styles.accent }}>🔔</span>
-                <b style={{ fontSize: '15px' }}>Notifications</b>
-              </div>
-              <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Get notified about new books and updates.</p>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <b style={{ fontSize: '12px', display: 'block' }}>New Book Releases</b>
-                    <span style={{ fontSize: '10px', color: styles.muted }}>Be the first to know about new arrivals</span>
-                  </div>
-                  <div onClick={() => toggleNotification('releases')} style={{ width: '38px', height: '22px', background: notifReleases ? styles.nav : styles.inner, borderRadius: '12px', position: 'relative', cursor: 'pointer', border: `1px solid ${styles.border}`, transition: '0.2s' }}>
-                    <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: notifReleases ? '18px' : '2px', transition: '0.2s' }} />
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <b style={{ fontSize: '12px', display: 'block' }}>Reading Reminders</b>
-                    <span style={{ fontSize: '10px', color: styles.muted }}>Daily/weekly reading goals</span>
-                  </div>
-                  <div onClick={() => toggleNotification('reminders')} style={{ width: '38px', height: '22px', background: notifReminders ? styles.nav : styles.inner, borderRadius: '12px', position: 'relative', cursor: 'pointer', border: `1px solid ${styles.border}`, transition: '0.2s' }}>
-                    <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: notifReminders ? '18px' : '2px', transition: '0.2s' }} />
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <b style={{ fontSize: '12px', display: 'block' }}>Comments & Replies</b>
-                    <span style={{ fontSize: '10px', color: styles.muted }}>Get notified about your activity</span>
-                  </div>
-                  <div onClick={() => toggleNotification('replies')} style={{ width: '38px', height: '22px', background: notifReplies ? styles.nav : styles.inner, borderRadius: '12px', position: 'relative', cursor: 'pointer', border: `1px solid ${styles.border}`, transition: '0.2s' }}>
-                    <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: notifReplies ? '18px' : '2px', transition: '0.2s' }} />
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <b style={{ fontSize: '12px', display: 'block' }}>Marketing & Updates</b>
-                    <span style={{ fontSize: '10px', color: styles.muted }}>Product updates, offers and news</span>
-                  </div>
-                  <div onClick={() => toggleNotification('marketing')} style={{ width: '38px', height: '22px', background: notifMarketing ? styles.nav : styles.inner, borderRadius: '12px', position: 'relative', cursor: 'pointer', border: `1px solid ${styles.border}`, transition: '0.2s' }}>
-                    <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: notifMarketing ? '18px' : '2px', transition: '0.2s' }} />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 4: Privacy & Security */}
-            <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <span style={{ fontSize: '16px', color: styles.accent }}>🛡️</span>
-                <b style={{ fontSize: '15px' }}>Privacy & Security</b>
-              </div>
-              <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Keep your account safe and secure.</p>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div onClick={() => { setIsRecoveryFlow(false); setIsPasswordModalOpen(true); }} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '4px 0' }}>
-                  <div>
-                    <b style={{ fontSize: '12px', display: 'block' }}>Change Password</b>
-                    <span style={{ fontSize: '10px', color: styles.muted }}>Update your password regularly</span>
-                  </div>
-                  <span style={{ color: styles.accent, fontWeight: 'bold' }}>›</span>
-                </div>
-
-                <div onClick={() => setActiveModal('2fa')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '4px 0' }}>
-                  <div>
-                    <b style={{ fontSize: '12px', display: 'block' }}>Two-Factor Authentication (2FA)</b>
-                    <span style={{ fontSize: '10px', color: styles.muted }}>Add an extra layer of security</span>
-                  </div>
-                  <span style={{ color: styles.accent, fontWeight: 'bold' }}>›</span>
-                </div>
-
-                <div onClick={() => setActiveModal('activity')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '4px 0' }}>
-                  <div>
-                    <b style={{ fontSize: '12px', display: 'block' }}>Login Activity</b>
-                    <span style={{ fontSize: '10px', color: styles.muted }}>View recent login sessions</span>
-                  </div>
-                  <span style={{ color: styles.accent, fontWeight: 'bold' }}>›</span>
-                </div>
-
-                <div onClick={handleLogout} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', borderTop: `1px solid ${styles.border}`, paddingTop: '10px' }}>
-                  <div>
-                    <b style={{ fontSize: '12px', display: 'block', color: '#ef4444' }}>Logout Account</b>
-                    <span style={{ fontSize: '10px', color: styles.muted }}>Sign out permanently from this device</span>
-                  </div>
-                  <span style={{ color: '#ef4444' }}>🚪</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 5: Library Settings */}
-            <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <span style={{ fontSize: '16px', color: styles.accent }}>📚</span>
-                <b style={{ fontSize: '15px' }}>Library Settings</b>
-              </div>
-              <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Manage your library and reading data.</p>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div onClick={() => window.location.href = '/library'} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
-                  <div>
-                    <b style={{ fontSize: '12px', display: 'block' }}>Download History</b>
-                    <span style={{ fontSize: '10px', color: styles.muted }}>View your downloaded books</span>
-                  </div>
-                  <span style={{ color: styles.muted }}>›</span>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <b style={{ fontSize: '12px', display: 'block' }}>Reading Progress</b>
-                    <span style={{ fontSize: '10px', color: styles.muted }}>Sync across devices</span>
-                  </div>
-                  <div onClick={() => toggleLibrarySetting('sync')} style={{ width: '38px', height: '22px', background: syncProgress ? styles.nav : styles.inner, borderRadius: '12px', position: 'relative', cursor: 'pointer', border: `1px solid ${styles.border}`, transition: '0.2s' }}>
-                    <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: syncProgress ? '18px' : '2px', transition: '0.2s' }} />
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <b style={{ fontSize: '12px', display: 'block' }}>Auto Save</b>
-                    <span style={{ fontSize: '10px', color: styles.muted }}>Save your reading position</span>
-                  </div>
-                  <div onClick={() => toggleLibrarySetting('autoSave')} style={{ width: '38px', height: '22px', background: autoSavePos ? styles.nav : styles.inner, borderRadius: '12px', position: 'relative', cursor: 'pointer', border: `1px solid ${styles.border}`, transition: '0.2s' }}>
-                    <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: autoSavePos ? '18px' : '2px', transition: '0.2s' }} />
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: `1px solid ${styles.border}`, paddingTop: '10px' }}>
-                  <div>
-                    <b style={{ fontSize: '12px', display: 'block' }}>Clear Cache</b>
-                    <span style={{ fontSize: '10px', color: styles.muted }}>Free up storage space</span>
-                  </div>
-                  <button onClick={() => alert('Cache cleared successfully!')} style={{ background: styles.inner, color: styles.muted, border: `1px solid ${styles.border}`, padding: '5px 12px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer' }}>Clear</button>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 6: Support & Help */}
-            <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <span style={{ fontSize: '16px', color: styles.accent }}>🎧</span>
-                <b style={{ fontSize: '15px' }}>Support & Help</b>
-              </div>
-              <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Get help and contact our team.</p>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {/* 1. Help Center Modal */}
-                <div onClick={() => setIsHelpCenterOpen(true)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
-                  <div>
-                    <b style={{ fontSize: '12px', display: 'block' }}>Help Center</b>
-                    <span style={{ fontSize: '10px', color: styles.muted }}>Find answers to common questions</span>
-                  </div>
-                  <span style={{ color: styles.accent, fontWeight: 'bold' }}>›</span>
-                </div>
-
-                {/* 2. Contact Us */}
-                <div onClick={() => window.open('mailto:readora.support@gmail.com')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
-                  <div>
-                    <b style={{ fontSize: '12px', display: 'block' }}>Contact Us</b>
-                    <span style={{ fontSize: '10px', color: styles.muted }}>Reach out to our support team</span>
-                  </div>
-                  <span style={{ color: styles.muted }}>›</span>
-                </div>
-
-                {/* 3. Terms & Conditions */}
-                <div onClick={() => alert('Terms of Service: By using Readora, you agree to read responsibly and respect author copyrights.')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
-                  <div>
-                    <b style={{ fontSize: '12px', display: 'block' }}>Terms & Conditions</b>
-                    <span style={{ fontSize: '10px', color: styles.muted }}>Read our terms of service</span>
-                  </div>
-                  <span style={{ color: styles.muted }}>›</span>
-                </div>
-
-                {/* 4. Privacy Policy */}
-                <div onClick={() => alert('Privacy Policy: Readora respects your privacy. Your data is stored safely in Supabase with end-to-end security.')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
-                  <div>
-                    <b style={{ fontSize: '12px', display: 'block' }}>Privacy Policy</b>
-                    <span style={{ fontSize: '10px', color: styles.muted }}>How we handle your data</span>
-                  </div>
-                  <span style={{ color: styles.muted }}>›</span>
-                </div>
-              </div>
-            </div>
-
-          </div>
         </div>
 
       </main>
@@ -994,4 +1019,4 @@ export default function SettingsPage() {
 
     </div>
   )
-      }
+                  }
