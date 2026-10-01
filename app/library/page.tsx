@@ -20,7 +20,7 @@ export default function LibraryPage() {
   const [likes, setLikes] = useState<string[]>([])
   const [saves, setSaves] = useState<string[]>([])
   const [recent, setRecent] = useState<string[]>([])
-  
+
   // Views & Reviews State
   const [viewsMap, setViewsMap] = useState<Record<string, number>>({})
   const [reviewsMap, setReviewsMap] = useState<Record<string, any[]>>({})
@@ -82,13 +82,11 @@ export default function LibraryPage() {
 
   // Open Reader and Increment Views
   const openBook = async (b: any) => {
-    // 1. Update Views
     const currentViews = (viewsMap[b.id] || 0) + 1
     const nextViews = { ...viewsMap, [b.id]: currentViews }
     setViewsMap(nextViews)
     try { localStorage.setItem('rd_views', JSON.stringify(nextViews)) } catch {}
 
-    // 2. Update Recent
     const updatedRecent = [b.id, ...recent.filter(id => id !== b.id)]
     setRecent(updatedRecent)
     try { localStorage.setItem('rd_recent', JSON.stringify(updatedRecent)) } catch {}
@@ -104,7 +102,6 @@ export default function LibraryPage() {
     } else { window.open(full, '_blank') }
   }
 
-  // Submit Review Handler
   const handleAddReview = (e: React.FormEvent) => {
     e.preventDefault()
     if (!activeReviewBook) return
@@ -140,6 +137,8 @@ export default function LibraryPage() {
     return matchCat && matchTab
   })
 
+  const avatarChar = user?.email ? user.email.charAt(0).toUpperCase() : 'W'
+
   if (reader) {
     return (
       <div style={{ position: 'fixed', inset: 0, background: '#0B0F17', zIndex: 9999, display: 'flex', flexDirection: 'column' }}>
@@ -167,6 +166,7 @@ export default function LibraryPage() {
             <div onClick={() => setTab('mybooks')} style={{ padding: '8px 10px', borderRadius: '6px', cursor: 'pointer', color: tab === 'mybooks' ? '#fff' : '#94a3b8', background: tab === 'mybooks' ? '#1d4ed8' : 'transparent' }}>📑 My Books ({saves.length})</div>
             <div onClick={() => setTab('recent')} style={{ padding: '8px 10px', borderRadius: '6px', cursor: 'pointer', color: tab === 'recent' ? '#fff' : '#94a3b8', background: tab === 'recent' ? '#1d4ed8' : 'transparent' }}>🕒 Recently Read ({recent.length})</div>
             <div onClick={() => setTab('favorites')} style={{ padding: '8px 10px', borderRadius: '6px', cursor: 'pointer', color: tab === 'favorites' ? '#fff' : '#94a3b8', background: tab === 'favorites' ? '#1d4ed8' : 'transparent' }}>❤️ Liked ({likes.length})</div>
+            <div onClick={() => window.location.href = '/settings'} style={{ padding: '8px 10px', borderRadius: '6px', cursor: 'pointer', color: '#94a3b8' }}>⚙️ Settings</div>
           </nav>
         </div>
         <div style={{ background: '#0d1322', padding: '10px', borderRadius: '8px', fontSize: '11px', border: '1px solid rgba(255,255,255,0.06)' }}>
@@ -176,13 +176,35 @@ export default function LibraryPage() {
 
       {/* Main Panel */}
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <header style={{ padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <header style={{ padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, background: '#070b14', zIndex: 30 }}>
           <span style={{ fontSize: '13px', color: '#94a3b8' }}>
             {tab === 'all' ? 'Book Collection' : tab === 'mybooks' ? 'My Saved Shelf' : tab === 'recent' ? 'Recently Read' : 'Liked Books'}
           </span>
-          <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '12px' }}>
-            {user?.email ? user.email.charAt(0).toUpperCase() : 'U'}
-          </div>
+          
+          {/* Profile Avatar "W" -> Click redirects to /settings */}
+          <button
+            type="button"
+            onClick={() => window.location.href = '/settings'}
+            style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              background: '#2563eb',
+              color: '#ffffff',
+              border: '2px solid rgba(255,255,255,0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: '800',
+              fontSize: '13px',
+              cursor: 'pointer',
+              outline: 'none',
+              boxShadow: '0 2px 8px rgba(37,99,235,0.4)'
+            }}
+            title="Profile & Settings"
+          >
+            {avatarChar}
+          </button>
         </header>
 
         <div style={{ padding: '16px 20px 40px', overflowY: 'auto' }}>
@@ -312,5 +334,5 @@ export default function LibraryPage() {
       )}
     </div>
   )
-    }
-      
+      }
+  
