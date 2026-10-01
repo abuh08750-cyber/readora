@@ -1,4 +1,4 @@
-'use client'
+ 'use client'
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
@@ -117,7 +117,7 @@ export default function LibraryPage() {
         setReader({ url: full, title: b.title, html: text })
       } catch { window.open(full, '_blank') }
     } else { window.open(full, '_blank') }
-    }
+  }
 
   const handleAddReview = (e: React.FormEvent) => {
     e.preventDefault()
@@ -136,7 +136,7 @@ export default function LibraryPage() {
     setReviewsMap(nextReviews)
     try { localStorage.setItem('rd_reviews', JSON.stringify(nextReviews)) } catch {}
     setInputComment('')
-  }
+    }
 
   const getBookRatingStats = (bookId: string) => {
     const list = reviewsMap[bookId] || []
@@ -410,4 +410,4 @@ export default function LibraryPage() {
       )}
     </div>
   )
-                       }
+      }
