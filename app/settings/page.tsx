@@ -12,6 +12,17 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
 })
 
+function hexToRgb(hex: string) {
+  let c = (hex || '#6366f1').replace('#', '')
+  if (c.length === 3) c = c.split('').map(x => x + x).join('')
+  const num = parseInt(c, 16) || 0
+  return {
+    r: (num >> 16) & 255,
+    g: (num >> 8) & 255,
+    b: num & 255,
+  }
+}
+
 export default function SettingsPage() {
   const [user, setUser] = useState<any>(null)
   const [fullName, setFullName] = useState('Abu Huzaifa')
@@ -23,12 +34,9 @@ export default function SettingsPage() {
   const [savedSuccess, setSavedSuccess] = useState(false)
   const [headerAvatar, setHeaderAvatar] = useState<string | null>(null)
 
-  // Reading Preferences State (Fully Functional & Persistent)
-  const [readingMode, setReadingMode] = useState('Dark Mode')
-  const [fontSize, setFontSize] = useState('Medium')
-  const [lineSpacing, setLineSpacing] = useState('Normal')
-  const [selectedTheme, setSelectedTheme] = useState('Dark')
-  const [prefsSavedMsg, setPrefsSavedMsg] = useState(false)
+  // Direct Active Theme
+  const [activeTheme, setActiveTheme] = useState<'Dark' | 'Light' | 'Sepia' | 'Custom'>('Dark')
+  const [customHex, setCustomHex] = useState('#6366f1')
 
   const [nameError, setNameError] = useState('')
   const [usernameError, setUsernameError] = useState('')
@@ -52,46 +60,91 @@ export default function SettingsPage() {
     try {
       const storedName = localStorage.getItem('readora_profile_fullname')
       const storedUser = localStorage.getItem('readora_profile_username')
-      if (storedName) {
-        setFullName(storedName)
-        setSavedFullName(storedName)
-      }
-      if (storedUser) {
-        setUsername(storedUser)
-        setSavedUsername(storedUser)
-      }
+      if (storedName) { setFullName(storedName); setSavedFullName(storedName); }
+      if (storedUser) { setUsername(storedUser); setSavedUsername(storedUser); }
       const savedImg = localStorage.getItem('readora_profile_avatar')
       if (savedImg) setHeaderAvatar(savedImg)
 
-      // Load saved Reading Preferences
-      const savedPrefs = localStorage.getItem('readora_reading_prefs')
-      if (savedPrefs) {
-        const parsed = JSON.parse(savedPrefs)
-        if (parsed.readingMode) setReadingMode(parsed.readingMode)
-        if (parsed.fontSize) setFontSize(parsed.fontSize)
-        if (parsed.lineSpacing) setLineSpacing(parsed.lineSpacing)
-        if (parsed.theme) setSelectedTheme(parsed.theme)
-      }
-    } catch (e) {
-      console.error(e)
-    }
+      const savedT = localStorage.getItem('readora_app_theme') as any
+      if (savedT) setActiveTheme(savedT)
+      const savedC = localStorage.getItem('readora_custom_color')
+      if (savedC) setCustomHex(savedC)
+    } catch (e) {}
   }, [])
 
-  // Helper to save reading preferences on every change
-  const saveReadingPrefs = (updated: { mode?: string; font?: string; line?: string; theme?: string }) => {
-    const nextPrefs = {
-      readingMode: updated.mode ?? readingMode,
-      fontSize: updated.font ?? fontSize,
-      lineSpacing: updated.line ?? lineSpacing,
-      theme: updated.theme ?? selectedTheme,
+  // Dynamic Styles Generator
+  const styles = (() => {
+    if (activeTheme === 'Light') {
+      return {
+        bg: '#f8fafc',
+        sidebar: '#ffffff',
+        header: '#ffffff',
+        card: '#ffffff',
+        inner: '#f1f5f9',
+        text: '#0f172a',
+        muted: '#64748b',
+        border: 'rgba(0,0,0,0.1)',
+        nav: '#2563eb',
+        accent: '#2563eb',
+      }
     }
+    if (activeTheme === 'Sepia') {
+      return {
+        bg: '#fbf0d9',
+        sidebar: '#f4e4c1',
+        header: '#f7e8c8',
+        card: '#fdf6e2',
+        inner: '#faebd0',
+        text: '#5c3d10',
+        muted: '#8c6b39',
+        border: 'rgba(92,61,16,0.15)',
+        nav: '#b45309',
+        accent: '#b45309',
+      }
+    }
+    if (activeTheme === 'Custom') {
+      const { r, g, b } = hexToRgb(customHex)
+      return {
+        bg: `radial-gradient(ellipse at top, rgba(${r}, ${g}, ${b}, 0.3) 0%, #06080f 85%)`,
+        sidebar: `rgba(${Math.floor(r * 0.08)}, ${Math.floor(g * 0.08)}, ${Math.floor(b * 0.08)}, 0.95)`,
+        header: `rgba(${Math.floor(r * 0.06)}, ${Math.floor(g * 0.06)}, ${Math.floor(b * 0.06)}, 0.95)`,
+        card: `rgba(${Math.floor(r * 0.15 + 10)}, ${Math.floor(g * 0.15 + 14)}, ${Math.floor(b * 0.15 + 24)}, 0.85)`,
+        inner: `rgba(${Math.floor(r * 0.08)}, ${Math.floor(g * 0.08)}, ${Math.floor(b * 0.08)}, 0.9)`,
+        text: '#f8fafc',
+        muted: `rgba(${Math.min(r + 60, 240)}, ${Math.min(g + 60, 240)}, ${Math.min(b + 60, 240)}, 0.85)`,
+        border: `rgba(${r}, ${g}, ${b}, 0.35)`,
+        nav: customHex,
+        accent: customHex,
+      }
+    }
+    return {
+      bg: '#070b14',
+      sidebar: '#070b14',
+      header: '#070b14',
+      card: '#0b1120',
+      inner: '#070b14',
+      text: '#f8fafc',
+      muted: '#94a3b8',
+      border: 'rgba(255,255,255,0.06)',
+      nav: '#1d4ed8',
+      accent: '#38bdf8',
+    }
+  })()
+
+  const switchTheme = (t: 'Dark' | 'Light' | 'Sepia' | 'Custom') => {
+    setActiveTheme(t)
     try {
-      localStorage.setItem('readora_reading_prefs', JSON.stringify(nextPrefs))
-      setPrefsSavedMsg(true)
-      setTimeout(() => setPrefsSavedMsg(false), 1800)
-    } catch (e) {
-      console.error(e)
-    }
+      localStorage.setItem('readora_app_theme', t)
+    } catch {}
+  }
+
+  const changeCustomColor = (hex: string) => {
+    setCustomHex(hex)
+    setActiveTheme('Custom')
+    try {
+      localStorage.setItem('readora_custom_color', hex)
+      localStorage.setItem('readora_app_theme', 'Custom')
+    } catch {}
   }
 
   const handleSave = (e: React.FormEvent) => {
@@ -104,36 +157,35 @@ export default function SettingsPage() {
     const SIXTY_DAYS_MS = 60 * 24 * 60 * 60 * 1000
 
     let hasError = false
-
     let nameHistory: number[] = []
     try {
       const storedHistory = localStorage.getItem('readora_name_change_history')
       if (storedHistory) nameHistory = JSON.parse(storedHistory)
     } catch {}
 
-    const recentNameChanges = nameHistory.filter(timestamp => now - timestamp < THIRTY_DAYS_MS)
+    const recentNameChanges = nameHistory.filter(t => now - t < THIRTY_DAYS_MS)
     const isNameChanged = fullName.trim() !== savedFullName.trim()
 
     if (isNameChanged && recentNameChanges.length >= 3) {
-      const oldestChange = Math.min(...recentNameChanges)
-      const daysLeft = Math.ceil((oldestChange + THIRTY_DAYS_MS - now) / (24 * 60 * 60 * 1000))
+      const oldest = Math.min(...recentNameChanges)
+      const daysLeft = Math.ceil((oldest + THIRTY_DAYS_MS - now) / (24 * 60 * 60 * 1000))
       setNameError(`You can only change your name 3 times every 30 days. Please try again in ${daysLeft} days.`)
       hasError = true
     }
 
-    let usernameHistory: number[] = []
+    let userHistory: number[] = []
     try {
-      const storedUserHistory = localStorage.getItem('readora_username_change_history')
-      if (storedUserHistory) usernameHistory = JSON.parse(storedUserHistory)
+      const stored = localStorage.getItem('readora_username_change_history')
+      if (stored) userHistory = JSON.parse(stored)
     } catch {}
 
-    const recentUserChanges = usernameHistory.filter(timestamp => now - timestamp < SIXTY_DAYS_MS)
-    const isUsernameChanged = username.trim() !== savedUsername.trim()
+    const recentUserChanges = userHistory.filter(t => now - t < SIXTY_DAYS_MS)
+    const isUserChanged = username.trim() !== savedUsername.trim()
 
-    if (isUsernameChanged && recentUserChanges.length >= 3) {
-      const oldestUserChange = Math.min(...recentUserChanges)
-      const daysLeft = Math.ceil((oldestUserChange + SIXTY_DAYS_MS - now) / (24 * 60 * 60 * 1000))
-      setUsernameError(`You can only change your username 3 times every 60 days (2 months). Please try again in ${daysLeft} days.`)
+    if (isUserChanged && recentUserChanges.length >= 3) {
+      const oldest = Math.min(...recentUserChanges)
+      const daysLeft = Math.ceil((oldest + SIXTY_DAYS_MS - now) / (24 * 60 * 60 * 1000))
+      setUsernameError(`You can only change your username 3 times every 60 days. Please try again in ${daysLeft} days.`)
       hasError = true
     }
 
@@ -145,14 +197,12 @@ export default function SettingsPage() {
         localStorage.setItem('readora_profile_fullname', fullName.trim())
         setSavedFullName(fullName.trim())
       }
-      if (isUsernameChanged) {
+      if (isUserChanged) {
         localStorage.setItem('readora_username_change_history', JSON.stringify([...recentUserChanges, now]))
         localStorage.setItem('readora_profile_username', username.trim())
         setSavedUsername(username.trim())
       }
-    } catch (err) {
-      console.error(err)
-    }
+    } catch (err) {}
 
     setSavedSuccess(true)
     setTimeout(() => setSavedSuccess(false), 2500)
@@ -165,83 +215,90 @@ export default function SettingsPage() {
 
   const avatarChar = user?.email ? user.email.charAt(0).toUpperCase() : 'W'
 
-  // Computed styles for the reader demo preview
-  const getPreviewStyle = () => {
-    let bg = '#0b1329'
-    let color = '#f8fafc'
-    if (selectedTheme === 'Light') {
-      bg = '#f8fafc'
-      color = '#0f172a'
-    } else if (selectedTheme === 'Sepia') {
-      bg = '#fef3c7'
-      color = '#78350f'
-    } else if (selectedTheme === 'Custom') {
-      bg = 'linear-gradient(135deg, #1e1b4b, #312e81)'
-      color = '#e0e7ff'
-    }
-
-    const fs = fontSize === 'Small' ? '11px' : fontSize === 'Large' ? '15px' : '13px'
-    const lh = lineSpacing === 'Relaxed' ? 1.9 : 1.4
-
-    return { background: bg, color, fontSize: fs, lineHeight: lh }
-  }
-
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#070b14', color: '#f8fafc', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div style={{
+      display: 'flex',
+      minHeight: '100vh',
+      background: styles.bg,
+      color: styles.text,
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      transition: 'all 0.25s ease'
+    }}>
       
-      {/* Sidebar Navigation */}
-      <aside style={{ width: '220px', background: '#070b14', borderRight: '1px solid rgba(255,255,255,0.06)', padding: '20px 14px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', flexShrink: 0 }}>
+      {/* Sidebar */}
+      <aside style={{
+        width: '220px',
+        background: styles.sidebar,
+        borderRight: `1px solid ${styles.border}`,
+        padding: '20px 14px',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        flexShrink: 0
+      }}>
         <div>
           <div onClick={() => window.location.href = '/'} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '19px', fontWeight: '800', marginBottom: '26px', cursor: 'pointer' }}>
             <span>📖</span><span>Readora</span>
           </div>
 
           <nav style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px' }}>
-            <div onClick={() => window.location.href = '/'} style={{ padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', color: '#94a3b8' }}>🏠 Home</div>
-            <div onClick={() => window.location.href = '/library'} style={{ padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', color: '#94a3b8' }}>📖 Library</div>
-            <div onClick={() => window.location.href = '/#categories-section'} style={{ padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', color: '#94a3b8' }}>🗂 Categories</div>
-            
-            <div style={{ height: '1px', background: 'rgba(255,255,255,0.06)', margin: '8px 0' }} />
-
-            <div onClick={() => window.location.href = '/library'} style={{ padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', color: '#94a3b8' }}>📑 My Books</div>
-            <div onClick={() => window.location.href = '/library'} style={{ padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', color: '#94a3b8' }}>🕒 Recently Read</div>
-            <div onClick={() => window.location.href = '/library'} style={{ padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', color: '#94a3b8' }}>🤍 Favorites</div>
-            <div style={{ padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', color: '#fff', background: '#1d4ed8', fontWeight: 'bold' }}>⚙️ Settings</div>
+            <div onClick={() => window.location.href = '/'} style={{ padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', color: styles.muted }}>🏠 Home</div>
+            <div onClick={() => window.location.href = '/library'} style={{ padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', color: styles.muted }}>📖 Library</div>
+            <div onClick={() => window.location.href = '/#categories-section'} style={{ padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', color: styles.muted }}>🗂 Categories</div>
+            <div style={{ height: '1px', background: styles.border, margin: '8px 0' }} />
+            <div onClick={() => window.location.href = '/library'} style={{ padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', color: styles.muted }}>📑 My Books</div>
+            <div onClick={() => window.location.href = '/library'} style={{ padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', color: styles.muted }}>🕒 Recently Read</div>
+            <div onClick={() => window.location.href = '/library'} style={{ padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', color: styles.muted }}>🤍 Favorites</div>
+            <div style={{ padding: '9px 12px', borderRadius: '8px', cursor: 'pointer', color: '#fff', background: styles.nav, fontWeight: 'bold' }}>⚙️ Settings</div>
           </nav>
         </div>
 
-        <div style={{ background: '#0d1322', padding: '12px', borderRadius: '12px', fontSize: '11px', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ background: styles.inner, padding: '12px', borderRadius: '12px', fontSize: '11px', border: `1px solid ${styles.border}` }}>
           <p style={{ margin: '0 0 4px', fontWeight: '700' }}>Better Books<br />Bigger Dreams</p>
-          <span style={{ color: '#38bdf8', fontWeight: 'bold' }}>📖 Readora</span>
+          <span style={{ color: styles.accent, fontWeight: 'bold' }}>📖 Readora</span>
         </div>
       </aside>
 
       {/* Main Panel */}
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflowY: 'auto' }}>
-        
-        {/* Top Header */}
-        <header style={{ padding: '14px 24px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, background: '#070b14', zIndex: 100 }}>
+        <header style={{
+          padding: '14px 24px',
+          borderBottom: `1px solid ${styles.border}`,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          position: 'sticky',
+          top: 0,
+          background: styles.header,
+          backdropFilter: 'blur(12px)',
+          zIndex: 100
+        }}>
           <div style={{ position: 'relative', width: '320px', maxWidth: '65%' }}>
-            <span style={{ position: 'absolute', left: '10px', top: '8px', color: '#64748b', fontSize: '13px' }}>🔍</span>
+            <span style={{ position: 'absolute', left: '10px', top: '8px', color: styles.muted, fontSize: '13px' }}>🔍</span>
             <input
               type="text"
               placeholder="Search for books, authors, or categories..."
-              style={{ width: '100%', background: '#0d1322', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px', padding: '7px 12px 7px 30px', color: '#fff', fontSize: '12px', outline: 'none' }}
+              style={{
+                width: '100%',
+                background: styles.inner,
+                border: `1px solid ${styles.border}`,
+                borderRadius: '18px',
+                padding: '7px 12px 7px 30px',
+                color: styles.text,
+                fontSize: '12px',
+                outline: 'none'
+              }}
             />
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <span style={{ color: '#94a3b8', cursor: 'pointer', fontSize: '16px' }}>☀️</span>
-
-            {/* Modular Notification Dropdown */}
+            <span style={{ color: styles.muted, cursor: 'pointer', fontSize: '16px' }}>☀️</span>
             <NotificationDropdown />
-
-            {/* Profile Avatar */}
             <div style={{
               width: '34px',
               height: '34px',
               borderRadius: '50%',
-              background: '#2563eb',
+              background: styles.nav,
               color: '#fff',
               display: 'flex',
               alignItems: 'center',
@@ -251,73 +308,74 @@ export default function SettingsPage() {
               backgroundImage: headerAvatar ? `url(${headerAvatar})` : 'none',
               backgroundSize: 'cover',
               backgroundPosition: 'center',
-              border: '2px solid rgba(255,255,255,0.2)'
+              border: `2px solid ${styles.border}`
             }}>
               {!headerAvatar && avatarChar}
             </div>
           </div>
         </header>
 
-        {/* Settings Content Dashboard */}
+        {/* Content */}
         <div style={{ padding: '24px 28px 60px', maxWidth: '1280px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
           
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontSize: '24px', color: '#38bdf8' }}>⚙️</span>
+                <span style={{ fontSize: '24px', color: styles.accent }}>⚙️</span>
                 <h1 style={{ fontSize: '26px', fontWeight: '800', margin: 0, letterSpacing: '-0.3px' }}>Settings</h1>
               </div>
-              <p style={{ color: '#94a3b8', fontSize: '13px', margin: '4px 0 0' }}>Manage your account, preferences and app settings.</p>
+              <p style={{ color: styles.muted, fontSize: '13px', margin: '4px 0 0' }}>Manage your account, preferences and app settings.</p>
             </div>
 
-            <div style={{ background: '#0e1628', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px 18px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{
+              background: styles.card,
+              border: `1px solid ${styles.border}`,
+              borderRadius: '12px',
+              padding: '12px 18px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
               <span style={{ fontSize: '22px' }}>📖</span>
               <div>
-                <b style={{ fontSize: '13px', color: '#fff', display: 'block' }}>Read. Learn. Grow.</b>
-                <span style={{ fontSize: '11px', color: '#94a3b8' }}>Your reading journey, your control.</span>
+                <b style={{ fontSize: '13px', color: styles.text, display: 'block' }}>Read. Learn. Grow.</b>
+                <span style={{ fontSize: '11px', color: styles.muted }}>Your reading journey, your control.</span>
               </div>
             </div>
           </div>
 
-          {/* 6 Cards Grid */}
+          {/* Cards Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '18px' }}>
             
             {/* Card 1: Account Settings */}
-            <div style={{ background: '#0b1120', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '20px' }}>
+            <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <span style={{ fontSize: '16px', color: '#38bdf8' }}>👤</span>
+                <span style={{ fontSize: '16px', color: styles.accent }}>👤</span>
                 <b style={{ fontSize: '15px' }}>Account Settings</b>
               </div>
-              <p style={{ color: '#64748b', fontSize: '11px', margin: '0 0 16px' }}>Update your personal information and account details.</p>
+              <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Update your personal information and account details.</p>
 
-              <ProfilePhotoUploader
-                defaultChar={avatarChar}
-                onPhotoChange={(newPhoto) => setHeaderAvatar(newPhoto)}
-              />
+              <ProfilePhotoUploader defaultChar={avatarChar} onPhotoChange={(p) => setHeaderAvatar(p)} />
 
               <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>Full Name</span>
-                    <span style={{ fontSize: '10px', color: '#64748b' }}>Max 3 edits / 30 days</span>
+                    <span style={{ fontSize: '11px', color: styles.muted }}>Full Name</span>
+                    <span style={{ fontSize: '10px', color: styles.muted }}>Max 3 edits / 30 days</span>
                   </div>
                   <input
                     type="text"
                     value={fullName}
                     onChange={(e) => { setFullName(e.target.value); setNameError(''); }}
-                    style={{ width: '100%', background: '#070b14', border: nameError ? '1px solid #ef4444' : '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '8px 12px', color: '#fff', fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', background: styles.inner, border: nameError ? '1px solid #ef4444' : `1px solid ${styles.border}`, borderRadius: '8px', padding: '8px 12px', color: styles.text, fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
                   />
-                  {nameError && (
-                    <span style={{ color: '#ef4444', fontSize: '11px', marginTop: '4px', display: 'block', lineHeight: 1.4 }}>
-                      ⚠️ {nameError}
-                    </span>
-                  )}
+                  {nameError && <span style={{ color: '#ef4444', fontSize: '11px', marginTop: '4px', display: 'block' }}>⚠️ {nameError}</span>}
                 </div>
 
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>Email Address</span>
-                    <span style={{ fontSize: '10px', color: '#38bdf8', fontWeight: 'bold' }}>🔒 Locked</span>
+                    <span style={{ fontSize: '11px', color: styles.muted }}>Email Address</span>
+                    <span style={{ fontSize: '10px', color: styles.accent, fontWeight: 'bold' }}>🔒 Locked</span>
                   </div>
                   <div style={{ position: 'relative' }}>
                     <input
@@ -325,373 +383,161 @@ export default function SettingsPage() {
                       value={emailVal}
                       readOnly
                       disabled
-                      style={{
-                        width: '100%',
-                        background: '#040711',
-                        border: '1px solid rgba(255,255,255,0.05)',
-                        borderRadius: '8px',
-                        padding: '8px 32px 8px 12px',
-                        color: '#64748b',
-                        fontSize: '12px',
-                        outline: 'none',
-                        boxSizing: 'border-box',
-                        cursor: 'not-allowed',
-                      }}
+                      style={{ width: '100%', background: styles.inner, border: `1px solid ${styles.border}`, borderRadius: '8px', padding: '8px 32px 8px 12px', color: styles.muted, fontSize: '12px', outline: 'none', boxSizing: 'border-box', cursor: 'not-allowed', opacity: 0.7 }}
                     />
                     <span style={{ position: 'absolute', right: '10px', top: '8px', fontSize: '12px', opacity: 0.6 }}>🔒</span>
                   </div>
-                  <span style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', display: 'block' }}>
-                    Registered email cannot be modified.
-                  </span>
                 </div>
 
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>Username</span>
-                    <span style={{ fontSize: '10px', color: '#64748b' }}>Max 3 edits / 60 days</span>
+                    <span style={{ fontSize: '11px', color: styles.muted }}>Username</span>
+                    <span style={{ fontSize: '10px', color: styles.muted }}>Max 3 edits / 60 days</span>
                   </div>
                   <input
                     type="text"
                     value={username}
                     onChange={(e) => { setUsername(e.target.value); setUsernameError(''); }}
-                    style={{ width: '100%', background: '#070b14', border: usernameError ? '1px solid #ef4444' : '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '8px 12px', color: '#fff', fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', background: styles.inner, border: usernameError ? '1px solid #ef4444' : `1px solid ${styles.border}`, borderRadius: '8px', padding: '8px 12px', color: styles.text, fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
                   />
-                  {usernameError && (
-                    <span style={{ color: '#ef4444', fontSize: '11px', marginTop: '4px', display: 'block', lineHeight: 1.4 }}>
-                      ⚠️ {usernameError}
-                    </span>
-                  )}
+                  {usernameError && <span style={{ color: '#ef4444', fontSize: '11px', marginTop: '4px', display: 'block' }}>⚠️ {usernameError}</span>}
                 </div>
 
-                <button
-                  type="submit"
-                  style={{
-                    marginTop: '8px',
-                    background: '#2563eb',
-                    color: '#fff',
-                    border: 'none',
-                    padding: '9px',
-                    borderRadius: '8px',
-                    fontWeight: 'bold',
-                    fontSize: '12px',
-                    cursor: 'pointer',
-                  }}
-                >
+                <button type="submit" style={{ marginTop: '8px', background: styles.nav, color: '#fff', border: 'none', padding: '9px', borderRadius: '8px', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}>
                   {savedSuccess ? '✓ Saved Successfully' : 'Save Changes'}
                 </button>
               </form>
             </div>
 
-            {/* Card 2: Reading Preferences (NOW FULLY WORKING & SAVING) */}
-            <div style={{ background: '#0b1120', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '16px', color: '#38bdf8' }}>📖</span>
-                  <b style={{ fontSize: '15px' }}>Reading Preferences</b>
-                </div>
-                {prefsSavedMsg && (
-                  <span style={{ fontSize: '11px', color: '#38bdf8', fontWeight: 'bold' }}>✓ Preferences Saved</span>
-                )}
+            {/* Card 2: Reading Preferences with INSTANT THEME PICKER */}
+            <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                <span style={{ fontSize: '16px', color: styles.accent }}>🎨</span>
+                <b style={{ fontSize: '15px' }}>Reading Preferences</b>
               </div>
-              <p style={{ color: '#64748b', fontSize: '11px', margin: '0 0 16px' }}>Customize your reading experience.</p>
+              <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Customize reading style & site colors.</p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {/* Mode Selector */}
                 <div>
-                  <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>Default Reading Mode</span>
-                  <select
-                    value={readingMode}
-                    onChange={(e) => {
-                      setReadingMode(e.target.value)
-                      saveReadingPrefs({ mode: e.target.value })
-                    }}
-                    style={{ width: '100%', background: '#070b14', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '8px 12px', color: '#fff', fontSize: '12px', outline: 'none', cursor: 'pointer' }}
-                  >
-                    <option value="Dark Mode">Dark Mode</option>
-                    <option value="Light Mode">Light Mode</option>
-                  </select>
-                </div>
-
-                {/* Font Size Selector */}
-                <div>
-                  <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>Font Size</span>
-                  <select
-                    value={fontSize}
-                    onChange={(e) => {
-                      setFontSize(e.target.value)
-                      saveReadingPrefs({ font: e.target.value })
-                    }}
-                    style={{ width: '100%', background: '#070b14', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '8px 12px', color: '#fff', fontSize: '12px', outline: 'none', cursor: 'pointer' }}
-                  >
-                    <option value="Small">Small (Compact text)</option>
-                    <option value="Medium">Medium (Recommended)</option>
-                    <option value="Large">Large (Easy to read)</option>
-                  </select>
-                </div>
-
-                {/* Line Spacing Selector */}
-                <div>
-                  <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>Line Spacing</span>
-                  <select
-                    value={lineSpacing}
-                    onChange={(e) => {
-                      setLineSpacing(e.target.value)
-                      saveReadingPrefs({ line: e.target.value })
-                    }}
-                    style={{ width: '100%', background: '#070b14', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '8px 12px', color: '#fff', fontSize: '12px', outline: 'none', cursor: 'pointer' }}
-                  >
-                    <option value="Normal">Normal</option>
-                    <option value="Relaxed">Relaxed (Extra space)</option>
-                  </select>
-                </div>
-
-                {/* Theme Selector */}
-                <div>
-                  <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', marginBottom: '6px' }}>Theme</span>
+                  <span style={{ fontSize: '11px', color: styles.muted, display: 'block', marginBottom: '4px' }}>Theme Palette (Tap any to change site)</span>
+                  
+                  {/* 4 Theme buttons */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
                     {[
                       { name: 'Dark', bg: '#0b1329', text: '#fff' },
-                      { name: 'Light', bg: '#f8fafc', text: '#000' },
+                      { name: 'Light', bg: '#ffffff', text: '#000' },
                       { name: 'Sepia', bg: '#fef3c7', text: '#78350f' },
-                      { name: 'Custom', bg: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', text: '#fff' },
+                      { name: 'Custom', bg: customHex, text: '#fff' },
                     ].map((t) => (
-                      <div
+                      <button
                         key={t.name}
-                        onClick={() => {
-                          setSelectedTheme(t.name)
-                          saveReadingPrefs({ theme: t.name })
-                        }}
+                        type="button"
+                        onClick={() => switchTheme(t.name as any)}
                         style={{
                           background: t.bg,
-                          border: selectedTheme === t.name ? '2px solid #2563eb' : '1px solid rgba(255,255,255,0.1)',
+                          color: t.text,
+                          border: activeTheme === t.name ? '2px solid #38bdf8' : '1px solid rgba(255,255,255,0.2)',
                           borderRadius: '8px',
-                          padding: '10px 4px',
+                          padding: '12px 4px',
                           textAlign: 'center',
                           fontSize: '11px',
-                          color: t.text,
                           fontWeight: 'bold',
                           cursor: 'pointer',
-                          boxShadow: selectedTheme === t.name ? '0 0 10px rgba(37,99,235,0.5)' : 'none',
-                          transition: '0.2s',
+                          boxShadow: activeTheme === t.name ? '0 0 10px rgba(56,189,248,0.5)' : 'none',
+                          transform: activeTheme === t.name ? 'scale(1.05)' : 'scale(1)',
+                          transition: '0.2s'
                         }}
                       >
                         {t.name}
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </div>
 
-                {/* Live Reader Preview Box */}
-                <div style={{ marginTop: '6px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '10px' }}>
-                  <span style={{ fontSize: '10px', color: '#64748b', display: 'block', marginBottom: '6px' }}>
-                    Live Reader Preview:
-                  </span>
-                  <div
-                    style={{
-                      borderRadius: '8px',
-                      padding: '12px 14px',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                      transition: 'all 0.2s ease',
-                      ...getPreviewStyle(),
-                    }}
-                  >
-                    <b>Chapter 1: The Creative Mind</b>
-                    <p style={{ margin: '4px 0 0' }}>
-                      "Apna safar shuru karo, roz kuch naya seekho aur aage badho."
-                    </p>
+                {/* Custom Color Selector (Visible when Custom is picked) */}
+                {activeTheme === 'Custom' && (
+                  <div style={{ background: styles.inner, border: `1px solid ${styles.border}`, borderRadius: '10px', padding: '10px 12px' }}>
+                    <span style={{ fontSize: '11px', color: styles.muted, display: 'block', marginBottom: '6px' }}>Pick Custom Color:</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <input
+                        type="color"
+                        value={customHex}
+                        onChange={(e) => changeCustomColor(e.target.value)}
+                        style={{ width: '40px', height: '40px', borderRadius: '50%', border: 'none', cursor: 'pointer', background: 'none' }}
+                      />
+                      <input
+                        type="text"
+                        value={customHex.toUpperCase()}
+                        onChange={(e) => changeCustomColor(e.target.value)}
+                        style={{ flex: 1, background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '6px', padding: '6px 10px', color: styles.text, fontSize: '12px', fontWeight: 'bold' }}
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
 
               </div>
             </div>
 
             {/* Card 3: Notifications */}
-            <div style={{ background: '#0b1120', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '20px' }}>
+            <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <span style={{ fontSize: '16px', color: '#38bdf8' }}>🔔</span>
+                <span style={{ fontSize: '16px', color: styles.accent }}>🔔</span>
                 <b style={{ fontSize: '15px' }}>Notifications</b>
               </div>
-              <p style={{ color: '#64748b', fontSize: '11px', margin: '0 0 16px' }}>Get notified about new books and updates.</p>
-
+              <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Get notified about new books.</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <b style={{ fontSize: '12px', display: 'block' }}>New Book Releases</b>
-                    <span style={{ fontSize: '10px', color: '#64748b' }}>Be the first to know about new arrivals</span>
+                    <span style={{ fontSize: '10px', color: styles.muted }}>Be the first to know</span>
                   </div>
-                  <div onClick={() => setNotifReleases(!notifReleases)} style={{ width: '38px', height: '22px', background: notifReleases ? '#2563eb' : '#1e293b', borderRadius: '12px', position: 'relative', cursor: 'pointer' }}>
-                    <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '3px', left: notifReleases ? '19px' : '3px', transition: '0.2s' }} />
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <b style={{ fontSize: '12px', display: 'block' }}>Reading Reminders</b>
-                    <span style={{ fontSize: '10px', color: '#64748b' }}>Daily/weekly reading goals</span>
-                  </div>
-                  <div onClick={() => setNotifReminders(!notifReminders)} style={{ width: '38px', height: '22px', background: notifReminders ? '#2563eb' : '#1e293b', borderRadius: '12px', position: 'relative', cursor: 'pointer' }}>
-                    <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '3px', left: notifReminders ? '19px' : '3px', transition: '0.2s' }} />
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <b style={{ fontSize: '12px', display: 'block' }}>Comments & Replies</b>
-                    <span style={{ fontSize: '10px', color: '#64748b' }}>Get notified about your activity</span>
-                  </div>
-                  <div onClick={() => setNotifReplies(!notifReplies)} style={{ width: '38px', height: '22px', background: notifReplies ? '#2563eb' : '#1e293b', borderRadius: '12px', position: 'relative', cursor: 'pointer' }}>
-                    <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '3px', left: notifReplies ? '19px' : '3px', transition: '0.2s' }} />
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <b style={{ fontSize: '12px', display: 'block' }}>Marketing & Updates</b>
-                    <span style={{ fontSize: '10px', color: '#64748b' }}>Product updates, offers and news</span>
-                  </div>
-                  <div onClick={() => setNotifMarketing(!notifMarketing)} style={{ width: '38px', height: '22px', background: notifMarketing ? '#2563eb' : '#1e293b', borderRadius: '12px', position: 'relative', cursor: 'pointer' }}>
-                    <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '3px', left: notifMarketing ? '19px' : '3px', transition: '0.2s' }} />
+                  <div onClick={() => setNotifReleases(!notifReleases)} style={{ width: '38px', height: '22px', background: notifReleases ? styles.nav : styles.inner, borderRadius: '12px', position: 'relative', cursor: 'pointer', border: `1px solid ${styles.border}` }}>
+                    <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: notifReleases ? '18px' : '2px', transition: '0.2s' }} />
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Card 4: Privacy & Security */}
-            <div style={{ background: '#0b1120', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '20px' }}>
+            <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <span style={{ fontSize: '16px', color: '#38bdf8' }}>🛡️</span>
+                <span style={{ fontSize: '16px', color: styles.accent }}>🛡️</span>
                 <b style={{ fontSize: '15px' }}>Privacy & Security</b>
               </div>
-              <p style={{ color: '#64748b', fontSize: '11px', margin: '0 0 16px' }}>Keep your account safe and secure.</p>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
-                  <div>
-                    <b style={{ fontSize: '12px', display: 'block' }}>Change Password</b>
-                    <span style={{ fontSize: '10px', color: '#64748b' }}>Update your password regularly</span>
-                  </div>
-                  <span style={{ color: '#64748b' }}>›</span>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
-                  <div>
-                    <b style={{ fontSize: '12px', display: 'block' }}>Two-Factor Authentication (2FA)</b>
-                    <span style={{ fontSize: '10px', color: '#64748b' }}>Add an extra layer of security</span>
-                  </div>
-                  <span style={{ color: '#64748b' }}>›</span>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
-                  <div>
-                    <b style={{ fontSize: '12px', display: 'block' }}>Login Activity</b>
-                    <span style={{ fontSize: '10px', color: '#64748b' }}>View recent login sessions</span>
-                  </div>
-                  <span style={{ color: '#64748b' }}>›</span>
-                </div>
-
-                <div onClick={handleLogout} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '10px' }}>
-                  <div>
-                    <b style={{ fontSize: '12px', display: 'block', color: '#ef4444' }}>Logout Account</b>
-                    <span style={{ fontSize: '10px', color: '#64748b' }}>Sign out from this device</span>
-                  </div>
-                  <span style={{ color: '#ef4444' }}>🚪</span>
-                </div>
+              <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Keep account safe.</p>
+              <div onClick={handleLogout} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', paddingTop: '10px' }}>
+                <b style={{ fontSize: '12px', color: '#ef4444' }}>Logout Account</b>
+                <span style={{ color: '#ef4444' }}>🚪</span>
               </div>
             </div>
 
             {/* Card 5: Library Settings */}
-            <div style={{ background: '#0b1120', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '20px' }}>
+            <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <span style={{ fontSize: '16px', color: '#38bdf8' }}>📚</span>
+                <span style={{ fontSize: '16px', color: styles.accent }}>📚</span>
                 <b style={{ fontSize: '15px' }}>Library Settings</b>
               </div>
-              <p style={{ color: '#64748b', fontSize: '11px', margin: '0 0 16px' }}>Manage your library and reading data.</p>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
-                  <div>
-                    <b style={{ fontSize: '12px', display: 'block' }}>Download History</b>
-                    <span style={{ fontSize: '10px', color: '#64748b' }}>View your downloaded books</span>
-                  </div>
-                  <span style={{ color: '#64748b' }}>›</span>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <b style={{ fontSize: '12px', display: 'block' }}>Reading Progress</b>
-                    <span style={{ fontSize: '10px', color: '#64748b' }}>Sync across devices</span>
-                  </div>
-                  <div onClick={() => setSyncProgress(!syncProgress)} style={{ width: '38px', height: '22px', background: syncProgress ? '#2563eb' : '#1e293b', borderRadius: '12px', position: 'relative', cursor: 'pointer' }}>
-                    <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '3px', left: syncProgress ? '19px' : '3px', transition: '0.2s' }} />
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <b style={{ fontSize: '12px', display: 'block' }}>Auto Save</b>
-                    <span style={{ fontSize: '10px', color: '#64748b' }}>Save your reading position</span>
-                  </div>
-                  <div onClick={() => setAutoSavePos(!autoSavePos)} style={{ width: '38px', height: '22px', background: autoSavePos ? '#2563eb' : '#1e293b', borderRadius: '12px', position: 'relative', cursor: 'pointer' }}>
-                    <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '3px', left: autoSavePos ? '19px' : '3px', transition: '0.2s' }} />
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '10px' }}>
-                  <div>
-                    <b style={{ fontSize: '12px', display: 'block' }}>Clear Cache</b>
-                    <span style={{ fontSize: '10px', color: '#64748b' }}>Free up storage space</span>
-                  </div>
-                  <button onClick={() => alert('Cache cleared!')} style={{ background: '#111c33', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.1)', padding: '5px 12px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer' }}>Clear</button>
+              <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Reading progress & cache.</p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <b style={{ fontSize: '12px' }}>Reading Progress</b>
+                <div onClick={() => setSyncProgress(!syncProgress)} style={{ width: '38px', height: '22px', background: syncProgress ? styles.nav : styles.inner, borderRadius: '12px', position: 'relative', cursor: 'pointer', border: `1px solid ${styles.border}` }}>
+                  <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: syncProgress ? '18px' : '2px', transition: '0.2s' }} />
                 </div>
               </div>
             </div>
 
-            {/* Card 6: Support & Help */}
-            <div style={{ background: '#0b1120', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '20px' }}>
+            {/* Card 6: Support */}
+            <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <span style={{ fontSize: '16px', color: '#38bdf8' }}>🎧</span>
+                <span style={{ fontSize: '16px', color: styles.accent }}>🎧</span>
                 <b style={{ fontSize: '15px' }}>Support & Help</b>
               </div>
-              <p style={{ color: '#64748b', fontSize: '11px', margin: '0 0 16px' }}>Get help and contact our team.</p>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
-                  <div>
-                    <b style={{ fontSize: '12px', display: 'block' }}>Help Center</b>
-                    <span style={{ fontSize: '10px', color: '#64748b' }}>Find answers to common questions</span>
-                  </div>
-                  <span style={{ color: '#64748b' }}>›</span>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
-                  <div>
-                    <b style={{ fontSize: '12px', display: 'block' }}>Contact Us</b>
-                    <span style={{ fontSize: '10px', color: '#64748b' }}>Reach out to our support team</span>
-                  </div>
-                  <span style={{ color: '#64748b' }}>›</span>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
-                  <div>
-                    <b style={{ fontSize: '12px', display: 'block' }}>Terms & Conditions</b>
-                    <span style={{ fontSize: '10px', color: '#64748b' }}>Read our terms of service</span>
-                  </div>
-                  <span style={{ color: '#64748b' }}>›</span>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
-                  <div>
-                    <b style={{ fontSize: '12px', display: 'block' }}>Privacy Policy</b>
-                    <span style={{ fontSize: '10px', color: '#64748b' }}>How we handle your data</span>
-                  </div>
-                  <span style={{ color: '#64748b' }}>›</span>
-                </div>
-              </div>
+              <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Get help from our team.</p>
+              <span style={{ fontSize: '12px', color: styles.accent, cursor: 'pointer' }}>Help Center & FAQ ➔</span>
             </div>
 
           </div>
         </div>
-
       </main>
     </div>
   )
