@@ -50,35 +50,56 @@ export default function SettingsPage() {
   const [nameError, setNameError] = useState('')
   const [usernameError, setUsernameError] = useState('')
 
-  // Notifications Toggles (Persistent)
+  // Notifications Toggles
   const [notifReleases, setNotifReleases] = useState(true)
   const [notifReminders, setNotifReminders] = useState(false)
   const [notifReplies, setNotifReplies] = useState(true)
   const [notifMarketing, setNotifMarketing] = useState(false)
 
-  // Library Settings Toggles (Persistent)
+  // Library Settings Toggles
   const [syncProgress, setSyncProgress] = useState(true)
   const [autoSavePos, setAutoSavePos] = useState(true)
 
   // Modal Open States
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false)
+  const [isRecoveryFlow, setIsRecoveryFlow] = useState(false)
   const [activeModal, setActiveModal] = useState<'none' | '2fa' | 'activity'>('none')
   const [is2FAEnabled, setIs2FAEnabled] = useState(false)
 
   useEffect(() => {
+    // 1. URL में रिकवरी टोकन (Password Reset Link) डिटेक्ट करें
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash
+      if (hash && (hash.includes('type=recovery') || hash.includes('access_token='))) {
+        setIsRecoveryFlow(true)
+        setIsPasswordModalOpen(true)
+      }
+    }
+
+    // 2. Supabase Session Check
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session?.user) {
+      // अगर रिकवरी टोकन आ रहा है, तो होम पर रीडायरेक्ट मत करो
+      const isRecovery = typeof window !== 'undefined' && window.location.hash.includes('type=recovery')
+      if (!session?.user && !isRecovery) {
         window.location.href = '/'
         return
       }
-      setUser(session.user)
-      if (session.user.email) setEmailVal(session.user.email)
+      if (session?.user) {
+        setUser(session.user)
+        if (session.user.email) setEmailVal(session.user.email)
+      }
       setAuthChecking(false)
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session?.user) {
-        window.location.href = '/'
+    // 3. Supabase Auth State Change Listener (PASSWORD_RECOVERY इवेंट को पकड़ेगा)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsRecoveryFlow(true)
+        setIsPasswordModalOpen(true)
+        if (session?.user) setUser(session.user)
+      } else if (!session?.user) {
+        const isRecovery = typeof window !== 'undefined' && window.location.hash.includes('type=recovery')
+        if (!isRecovery) window.location.href = '/'
       } else {
         setUser(session.user)
       }
@@ -175,7 +196,6 @@ export default function SettingsPage() {
     } catch (e) {}
   }
 
-  // Dynamic Theme Colors
   const styles = (() => {
     if (activeTheme === 'Light') {
       return {
@@ -499,7 +519,7 @@ export default function SettingsPage() {
                     onChange={(e) => { setFullName(e.target.value); setNameError(''); }}
                     style={{ width: '100%', background: styles.inner, border: nameError ? '1px solid #ef4444' : `1px solid ${styles.border}`, borderRadius: '8px', padding: '8px 12px', color: styles.text, fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
                   />
-                  {nameError && <span style={{ color: '#ef4444', fontSize: '11px', marginTop: '4px', display: 'block' }}>⚠️ {nameError}</span>}
+                  {nameError && <span style={{ color: '#ef4444', fontSize: '11px', marginTop: '4px', display: 'block' }}>⚠️️ {nameError}</span>}
                 </div>
 
                 <div>
@@ -706,8 +726,8 @@ export default function SettingsPage() {
               <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Keep your account safe and secure.</p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {/* 1. Change Password Button -> Opens Modal Component */}
-                <div onClick={() => setIsPasswordModalOpen(true)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '4px 0' }}>
+                {/* 1. Change Password Button */}
+                <div onClick={() => { setIsRecoveryFlow(false); setIsPasswordModalOpen(true); }} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '4px 0' }}>
                   <div>
                     <b style={{ fontSize: '12px', display: 'block' }}>Change Password</b>
                     <span style={{ fontSize: '10px', color: styles.muted }}>Update your password regularly</span>
@@ -839,11 +859,12 @@ export default function SettingsPage() {
 
       </main>
 
-      {/* SEPARATE COMPONENT: Change Password Modal */}
+      {/* Change / Reset Password Modal */}
       <ChangePasswordModal
         isOpen={isPasswordModalOpen}
-        onClose={() => setIsPasswordModalOpen(false)}
+        onClose={() => { setIsPasswordModalOpen(false); setIsRecoveryFlow(false); }}
         userEmail={user?.email || emailVal}
+        isRecoveryMode={isRecoveryFlow}
       />
 
       {/* POPUP MODAL: Two-Factor Authentication (2FA) */}
@@ -907,4 +928,4 @@ export default function SettingsPage() {
 
     </div>
   )
-                                }
+                             }
