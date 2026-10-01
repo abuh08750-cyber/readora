@@ -14,11 +14,18 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
 export default function SettingsPage() {
   const [user, setUser] = useState<any>(null)
   const [fullName, setFullName] = useState('Abu Huzaifa')
-  const [emailVal, setEmailVal] = useState('abu.huzaifa@example.com')
-  const [username, setUsername] = useState('abu.huzaifa')
+  const [savedFullName, setSavedFullName] = useState('Abu Huzaifa')
+  const [emailVal, setEmailVal] = useState('waqasabu186@gmail.com')
+  const [username, setUsername] = useState('waqasabu186')
+  const [savedUsername, setSavedUsername] = useState('waqasabu186')
+  
   const [selectedTheme, setSelectedTheme] = useState('Dark')
   const [savedSuccess, setSavedSuccess] = useState(false)
   const [headerAvatar, setHeaderAvatar] = useState<string | null>(null)
+
+  // Validation Error Messages
+  const [nameError, setNameError] = useState('')
+  const [usernameError, setUsernameError] = useState('')
 
   // Toggles
   const [notifReleases, setNotifReleases] = useState(true)
@@ -34,21 +41,101 @@ export default function SettingsPage() {
         setUser(session.user)
         if (session.user.email) {
           setEmailVal(session.user.email)
-          const namePart = session.user.email.split('@')[0]
-          setFullName(namePart)
-          setUsername(namePart)
         }
       }
     })
 
+    // Load saved Profile Name & Username from localStorage
     try {
+      const storedName = localStorage.getItem('readora_profile_fullname')
+      const storedUser = localStorage.getItem('readora_profile_username')
+      if (storedName) {
+        setFullName(storedName)
+        setSavedFullName(storedName)
+      }
+      if (storedUser) {
+        setUsername(storedUser)
+        setSavedUsername(storedUser)
+      }
       const savedImg = localStorage.getItem('readora_profile_avatar')
       if (savedImg) setHeaderAvatar(savedImg)
-    } catch {}
+    } catch (e) {
+      console.error(e)
+    }
   }, [])
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault()
+    setNameError('')
+    setUsernameError('')
+
+    const now = Date.now()
+    const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000
+    const SIXTY_DAYS_MS = 60 * 24 * 60 * 60 * 1000
+
+    let hasError = false
+
+    // 1. Check Full Name Rate Limit (Max 3 times in 30 days)
+    let nameHistory: number[] = []
+    try {
+      const storedHistory = localStorage.getItem('readora_name_change_history')
+      if (storedHistory) nameHistory = JSON.parse(storedHistory)
+    } catch {}
+
+    // Filter to only changes within the last 30 days
+    const recentNameChanges = nameHistory.filter(timestamp => now - timestamp < THIRTY_DAYS_MS)
+
+    const isNameChanged = fullName.trim() !== savedFullName.trim()
+    if (isNameChanged) {
+      if (recentNameChanges.length >= 3) {
+        const oldestChange = Math.min(...recentNameChanges)
+        const daysLeft = Math.ceil((oldestChange + THIRTY_DAYS_MS - now) / (24 * 60 * 60 * 1000))
+        setNameError(`You can only change your name 3 times every 30 days. Please try again in ${daysLeft} days.`)
+        hasError = true
+      }
+    }
+
+    // 2. Check Username Rate Limit (Max 3 times in 60 days / 2 months)
+    let usernameHistory: number[] = []
+    try {
+      const storedUserHistory = localStorage.getItem('readora_username_change_history')
+      if (storedUserHistory) usernameHistory = JSON.parse(storedUserHistory)
+    } catch {}
+
+    // Filter to only changes within the last 60 days
+    const recentUserChanges = usernameHistory.filter(timestamp => now - timestamp < SIXTY_DAYS_MS)
+
+    const isUsernameChanged = username.trim() !== savedUsername.trim()
+    if (isUsernameChanged) {
+      if (recentUserChanges.length >= 3) {
+        const oldestUserChange = Math.min(...recentUserChanges)
+        const daysLeft = Math.ceil((oldestUserChange + SIXTY_DAYS_MS - now) / (24 * 60 * 60 * 1000))
+        setUsernameError(`You can only change your username 3 times every 60 days (2 months). Please try again in ${daysLeft} days.`)
+        hasError = true
+      }
+    }
+
+    if (hasError) return
+
+    // 3. Save updates permanently to localStorage
+    try {
+      if (isNameChanged) {
+        const updatedNameHistory = [...recentNameChanges, now]
+        localStorage.setItem('readora_name_change_history', JSON.stringify(updatedNameHistory))
+        localStorage.setItem('readora_profile_fullname', fullName.trim())
+        setSavedFullName(fullName.trim())
+      }
+
+      if (isUsernameChanged) {
+        const updatedUserHistory = [...recentUserChanges, now]
+        localStorage.setItem('readora_username_change_history', JSON.stringify(updatedUserHistory))
+        localStorage.setItem('readora_profile_username', username.trim())
+        setSavedUsername(username.trim())
+      }
+    } catch (err) {
+      console.error(err)
+    }
+
     setSavedSuccess(true)
     setTimeout(() => setSavedSuccess(false), 2500)
   }
@@ -152,7 +239,7 @@ export default function SettingsPage() {
           {/* 6 Cards Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '18px' }}>
             
-            {/* Card 1: Account Settings (Using our new ProfilePhotoUploader Component) */}
+            {/* Card 1: Account Settings */}
             <div style={{ background: '#0b1120', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                 <span style={{ fontSize: '16px', color: '#38bdf8' }}>👤</span>
@@ -160,29 +247,99 @@ export default function SettingsPage() {
               </div>
               <p style={{ color: '#64748b', fontSize: '11px', margin: '0 0 16px' }}>Update your personal information and account details.</p>
 
-              {/* Modular Photo Uploader Component */}
+              {/* Photo Uploader */}
               <ProfilePhotoUploader
                 defaultChar={avatarChar}
                 onPhotoChange={(newPhoto) => setHeaderAvatar(newPhoto)}
               />
 
               <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                
+                {/* Full Name Field */}
                 <div>
-                  <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>Full Name</span>
-                  <input type="text" value={fullName} onChange={e => setFullName(e.target.value)} style={{ width: '100%', background: '#070b14', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '8px 12px', color: '#fff', fontSize: '12px', outline: 'none', boxSizing: 'border-box' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>Full Name</span>
+                    <span style={{ fontSize: '10px', color: '#64748b' }}>Max 3 edits / 30 days</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => { setFullName(e.target.value); setNameError(''); }}
+                    style={{ width: '100%', background: '#070b14', border: nameError ? '1px solid #ef4444' : '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '8px 12px', color: '#fff', fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                  {nameError && (
+                    <span style={{ color: '#ef4444', fontSize: '11px', marginTop: '4px', display: 'block', lineHeight: 1.4 }}>
+                      ⚠️ {nameError}
+                    </span>
+                  )}
                 </div>
 
+                {/* Email Address Field (LOCKED 🔒) */}
                 <div>
-                  <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>Email Address</span>
-                  <input type="email" value={emailVal} onChange={e => setEmailVal(e.target.value)} style={{ width: '100%', background: '#070b14', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '8px 12px', color: '#fff', fontSize: '12px', outline: 'none', boxSizing: 'border-box' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>Email Address</span>
+                    <span style={{ fontSize: '10px', color: '#38bdf8', fontWeight: 'bold' }}>🔒 Locked</span>
+                  </div>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type="email"
+                      value={emailVal}
+                      readOnly
+                      disabled
+                      style={{
+                        width: '100%',
+                        background: '#040711',
+                        border: '1px solid rgba(255,255,255,0.05)',
+                        borderRadius: '8px',
+                        padding: '8px 32px 8px 12px',
+                        color: '#64748b',
+                        fontSize: '12px',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                        cursor: 'not-allowed',
+                      }}
+                    />
+                    <span style={{ position: 'absolute', right: '10px', top: '8px', fontSize: '12px', opacity: 0.6 }}>🔒</span>
+                  </div>
+                  <span style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', display: 'block' }}>
+                    Registered email cannot be modified.
+                  </span>
                 </div>
 
+                {/* Username Field */}
                 <div>
-                  <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>Username</span>
-                  <input type="text" value={username} onChange={e => setUsername(e.target.value)} style={{ width: '100%', background: '#070b14', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '8px 12px', color: '#fff', fontSize: '12px', outline: 'none', boxSizing: 'border-box' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>Username</span>
+                    <span style={{ fontSize: '10px', color: '#64748b' }}>Max 3 edits / 60 days</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => { setUsername(e.target.value); setUsernameError(''); }}
+                    style={{ width: '100%', background: '#070b14', border: usernameError ? '1px solid #ef4444' : '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '8px 12px', color: '#fff', fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                  {usernameError && (
+                    <span style={{ color: '#ef4444', fontSize: '11px', marginTop: '4px', display: 'block', lineHeight: 1.4 }}>
+                      ⚠️ {usernameError}
+                    </span>
+                  )}
                 </div>
 
-                <button type="submit" style={{ marginTop: '8px', background: '#2563eb', color: '#fff', border: 'none', padding: '9px', borderRadius: '8px', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}>
+                <button
+                  type="submit"
+                  style={{
+                    marginTop: '8px',
+                    background: '#2563eb',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '9px',
+                    borderRadius: '8px',
+                    fontWeight: 'bold',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    transition: '0.2s',
+                  }}
+                >
                   {savedSuccess ? '✓ Saved Successfully' : 'Save Changes'}
                 </button>
               </form>
@@ -243,7 +400,7 @@ export default function SettingsPage() {
                           fontSize: '11px',
                           color: t.text || '#fff',
                           fontWeight: 'bold',
-                          cursor: 'pointer'
+                          cursor: 'pointer',
                         }}
                       >
                         {t.name}
@@ -444,4 +601,4 @@ export default function SettingsPage() {
       </main>
     </div>
   )
-      }
+              }
