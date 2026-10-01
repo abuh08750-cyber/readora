@@ -20,9 +20,15 @@ export default function SettingsPage() {
   const [username, setUsername] = useState('waqasabu186')
   const [savedUsername, setSavedUsername] = useState('waqasabu186')
 
-  const [selectedTheme, setSelectedTheme] = useState('Dark')
   const [savedSuccess, setSavedSuccess] = useState(false)
   const [headerAvatar, setHeaderAvatar] = useState<string | null>(null)
+
+  // Reading Preferences State (Fully Functional & Persistent)
+  const [readingMode, setReadingMode] = useState('Dark Mode')
+  const [fontSize, setFontSize] = useState('Medium')
+  const [lineSpacing, setLineSpacing] = useState('Normal')
+  const [selectedTheme, setSelectedTheme] = useState('Dark')
+  const [prefsSavedMsg, setPrefsSavedMsg] = useState(false)
 
   const [nameError, setNameError] = useState('')
   const [usernameError, setUsernameError] = useState('')
@@ -56,10 +62,37 @@ export default function SettingsPage() {
       }
       const savedImg = localStorage.getItem('readora_profile_avatar')
       if (savedImg) setHeaderAvatar(savedImg)
+
+      // Load saved Reading Preferences
+      const savedPrefs = localStorage.getItem('readora_reading_prefs')
+      if (savedPrefs) {
+        const parsed = JSON.parse(savedPrefs)
+        if (parsed.readingMode) setReadingMode(parsed.readingMode)
+        if (parsed.fontSize) setFontSize(parsed.fontSize)
+        if (parsed.lineSpacing) setLineSpacing(parsed.lineSpacing)
+        if (parsed.theme) setSelectedTheme(parsed.theme)
+      }
     } catch (e) {
       console.error(e)
     }
   }, [])
+
+  // Helper to save reading preferences on every change
+  const saveReadingPrefs = (updated: { mode?: string; font?: string; line?: string; theme?: string }) => {
+    const nextPrefs = {
+      readingMode: updated.mode ?? readingMode,
+      fontSize: updated.font ?? fontSize,
+      lineSpacing: updated.line ?? lineSpacing,
+      theme: updated.theme ?? selectedTheme,
+    }
+    try {
+      localStorage.setItem('readora_reading_prefs', JSON.stringify(nextPrefs))
+      setPrefsSavedMsg(true)
+      setTimeout(() => setPrefsSavedMsg(false), 1800)
+    } catch (e) {
+      console.error(e)
+    }
+  }
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault()
@@ -132,6 +165,27 @@ export default function SettingsPage() {
 
   const avatarChar = user?.email ? user.email.charAt(0).toUpperCase() : 'W'
 
+  // Computed styles for the reader demo preview
+  const getPreviewStyle = () => {
+    let bg = '#0b1329'
+    let color = '#f8fafc'
+    if (selectedTheme === 'Light') {
+      bg = '#f8fafc'
+      color = '#0f172a'
+    } else if (selectedTheme === 'Sepia') {
+      bg = '#fef3c7'
+      color = '#78350f'
+    } else if (selectedTheme === 'Custom') {
+      bg = 'linear-gradient(135deg, #1e1b4b, #312e81)'
+      color = '#e0e7ff'
+    }
+
+    const fs = fontSize === 'Small' ? '11px' : fontSize === 'Large' ? '15px' : '13px'
+    const lh = lineSpacing === 'Relaxed' ? 1.9 : 1.4
+
+    return { background: bg, color, fontSize: fs, lineHeight: lh }
+  }
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#070b14', color: '#f8fafc', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       
@@ -179,7 +233,7 @@ export default function SettingsPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <span style={{ color: '#94a3b8', cursor: 'pointer', fontSize: '16px' }}>☀️</span>
 
-            {/* Separate Modular Notification Dropdown */}
+            {/* Modular Notification Dropdown */}
             <NotificationDropdown />
 
             {/* Profile Avatar */}
@@ -328,62 +382,97 @@ export default function SettingsPage() {
               </form>
             </div>
 
-            {/* Card 2: Reading Preferences */}
+            {/* Card 2: Reading Preferences (NOW FULLY WORKING & SAVING) */}
             <div style={{ background: '#0b1120', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <span style={{ fontSize: '16px', color: '#38bdf8' }}>📖</span>
-                <b style={{ fontSize: '15px' }}>Reading Preferences</b>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '16px', color: '#38bdf8' }}>📖</span>
+                  <b style={{ fontSize: '15px' }}>Reading Preferences</b>
+                </div>
+                {prefsSavedMsg && (
+                  <span style={{ fontSize: '11px', color: '#38bdf8', fontWeight: 'bold' }}>✓ Preferences Saved</span>
+                )}
               </div>
               <p style={{ color: '#64748b', fontSize: '11px', margin: '0 0 16px' }}>Customize your reading experience.</p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {/* Mode Selector */}
                 <div>
                   <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>Default Reading Mode</span>
-                  <select style={{ width: '100%', background: '#070b14', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '8px 12px', color: '#fff', fontSize: '12px', outline: 'none' }}>
-                    <option>Dark Mode</option>
-                    <option>Light Mode</option>
+                  <select
+                    value={readingMode}
+                    onChange={(e) => {
+                      setReadingMode(e.target.value)
+                      saveReadingPrefs({ mode: e.target.value })
+                    }}
+                    style={{ width: '100%', background: '#070b14', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '8px 12px', color: '#fff', fontSize: '12px', outline: 'none', cursor: 'pointer' }}
+                  >
+                    <option value="Dark Mode">Dark Mode</option>
+                    <option value="Light Mode">Light Mode</option>
                   </select>
                 </div>
 
+                {/* Font Size Selector */}
                 <div>
                   <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>Font Size</span>
-                  <select style={{ width: '100%', background: '#070b14', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '8px 12px', color: '#fff', fontSize: '12px', outline: 'none' }}>
-                    <option>Medium</option>
-                    <option>Small</option>
-                    <option>Large</option>
+                  <select
+                    value={fontSize}
+                    onChange={(e) => {
+                      setFontSize(e.target.value)
+                      saveReadingPrefs({ font: e.target.value })
+                    }}
+                    style={{ width: '100%', background: '#070b14', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '8px 12px', color: '#fff', fontSize: '12px', outline: 'none', cursor: 'pointer' }}
+                  >
+                    <option value="Small">Small (Compact text)</option>
+                    <option value="Medium">Medium (Recommended)</option>
+                    <option value="Large">Large (Easy to read)</option>
                   </select>
                 </div>
 
+                {/* Line Spacing Selector */}
                 <div>
                   <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>Line Spacing</span>
-                  <select style={{ width: '100%', background: '#070b14', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '8px 12px', color: '#fff', fontSize: '12px', outline: 'none' }}>
-                    <option>Normal</option>
-                    <option>Relaxed</option>
+                  <select
+                    value={lineSpacing}
+                    onChange={(e) => {
+                      setLineSpacing(e.target.value)
+                      saveReadingPrefs({ line: e.target.value })
+                    }}
+                    style={{ width: '100%', background: '#070b14', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '8px 12px', color: '#fff', fontSize: '12px', outline: 'none', cursor: 'pointer' }}
+                  >
+                    <option value="Normal">Normal</option>
+                    <option value="Relaxed">Relaxed (Extra space)</option>
                   </select>
                 </div>
 
+                {/* Theme Selector */}
                 <div>
                   <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', marginBottom: '6px' }}>Theme</span>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
                     {[
-                      { name: 'Dark', bg: '#0b1329' },
+                      { name: 'Dark', bg: '#0b1329', text: '#fff' },
                       { name: 'Light', bg: '#f8fafc', text: '#000' },
                       { name: 'Sepia', bg: '#fef3c7', text: '#78350f' },
-                      { name: 'Custom', bg: 'linear-gradient(135deg, #3b82f6, #8b5cf6)' },
+                      { name: 'Custom', bg: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', text: '#fff' },
                     ].map((t) => (
                       <div
                         key={t.name}
-                        onClick={() => setSelectedTheme(t.name)}
+                        onClick={() => {
+                          setSelectedTheme(t.name)
+                          saveReadingPrefs({ theme: t.name })
+                        }}
                         style={{
                           background: t.bg,
                           border: selectedTheme === t.name ? '2px solid #2563eb' : '1px solid rgba(255,255,255,0.1)',
                           borderRadius: '8px',
-                          padding: '12px 4px',
+                          padding: '10px 4px',
                           textAlign: 'center',
                           fontSize: '11px',
-                          color: t.text || '#fff',
+                          color: t.text,
                           fontWeight: 'bold',
                           cursor: 'pointer',
+                          boxShadow: selectedTheme === t.name ? '0 0 10px rgba(37,99,235,0.5)' : 'none',
+                          transition: '0.2s',
                         }}
                       >
                         {t.name}
@@ -391,6 +480,28 @@ export default function SettingsPage() {
                     ))}
                   </div>
                 </div>
+
+                {/* Live Reader Preview Box */}
+                <div style={{ marginTop: '6px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '10px' }}>
+                  <span style={{ fontSize: '10px', color: '#64748b', display: 'block', marginBottom: '6px' }}>
+                    Live Reader Preview:
+                  </span>
+                  <div
+                    style={{
+                      borderRadius: '8px',
+                      padding: '12px 14px',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      transition: 'all 0.2s ease',
+                      ...getPreviewStyle(),
+                    }}
+                  >
+                    <b>Chapter 1: The Creative Mind</b>
+                    <p style={{ margin: '4px 0 0' }}>
+                      "Apna safar shuru karo, roz kuch naya seekho aur aage badho."
+                    </p>
+                  </div>
+                </div>
+
               </div>
             </div>
 
@@ -584,4 +695,4 @@ export default function SettingsPage() {
       </main>
     </div>
   )
-                           }
+      }
