@@ -13,6 +13,12 @@ export async function POST(req: Request) {
     const coverFile = formData.get("cover") as File | null;
     const ebookFile = formData.get("ebook") as File | null;
 
+    // Free / Paid aur Price data retrieve karna
+    const isPaidRaw = formData.get("is_paid");
+    const is_paid = isPaidRaw === "true" || isPaidRaw === "1";
+    const priceRaw = formData.get("price") as string;
+    const price = is_paid && priceRaw ? parseFloat(priceRaw) : 0;
+
     if (!title || !author || !category || !ebookFile) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
@@ -48,15 +54,19 @@ export async function POST(req: Request) {
 
     const { data: ebookData } = supabase.storage.from("ebooks").getPublicUrl(ebookPath);
 
+    // Books table mein is_paid aur price save karna
     const { error: dbErr } = await supabase.from("books").insert({
       title,
       author,
       category,
       description,
       cover_url,
+      cover_path: cover_url,
       file_path: ebookPath,
       file_url: ebookData.publicUrl,
       file_type: ebookExt,
+      is_paid,
+      price,
       published: true
     });
 
@@ -69,4 +79,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: err.message || "Upload failed" }, { status: 500 });
   }
         }
-  
+      
