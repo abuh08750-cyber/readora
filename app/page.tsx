@@ -26,7 +26,7 @@ export default function HomePage() {
   const [authError, setAuthError] = useState('')
   const [loading, setLoading] = useState(true)
   const [headerAvatar, setHeaderAvatar] = useState<string | null>(null)
-  const [pendingRedirectToLibrary, setPendingRedirectToLibrary] = useState(false)
+  const [pendingRedirect, setPendingRedirect] = useState<string | null>(null)
 
   const [userLibIds, setUserLibIds] = useState<string[]>([])
   const [savedIds, setSavedIds] = useState<string[]>([])
@@ -40,7 +40,8 @@ export default function HomePage() {
       if (cat) setSelectedCategoryFilter(cat)
       if (params.get('auth') === 'required') {
         setShowAuthModal(true)
-        setPendingRedirectToLibrary(true)
+        const redirectTarget = params.get('redirect') || '/library'
+        setPendingRedirect(redirectTarget)
       }
     }
 
@@ -56,9 +57,11 @@ export default function HomePage() {
         setUser(session.user)
         loadUserShelves(session.user.id)
         setShowAuthModal(false)
-        if (pendingRedirectToLibrary || (typeof window !== 'undefined' && sessionStorage.getItem('readora_pending_library') === 'true')) {
-          sessionStorage.removeItem('readora_pending_library')
-          window.location.href = '/library'
+
+        const target = pendingRedirect || (typeof window !== 'undefined' && sessionStorage.getItem('readora_pending_target'))
+        if (target) {
+          sessionStorage.removeItem('readora_pending_target')
+          window.location.href = target
         }
       } else {
         setUser(null)
@@ -92,7 +95,7 @@ export default function HomePage() {
     }
     loadBooks()
     return () => subscription.unsubscribe()
-  }, [pendingRedirectToLibrary])
+  }, [pendingRedirect])
 
   const loadUserShelves = (uid: string) => {
     try {
@@ -105,6 +108,28 @@ export default function HomePage() {
     } catch {}
   }
 
+  // Library Navigation Check
+  const handleLibraryClick = () => {
+    if (user) {
+      window.location.href = '/library'
+    } else {
+      setPendingRedirect('/library')
+      try { sessionStorage.setItem('readora_pending_target', '/library') } catch {}
+      setShowAuthModal(true)
+    }
+  }
+
+  // Category Navigation Check (Login required)
+  const handleCategoryClick = () => {
+    if (user) {
+      window.location.href = '/categories'
+    } else {
+      setPendingRedirect('/categories')
+      try { sessionStorage.setItem('readora_pending_target', '/categories') } catch {}
+      setShowAuthModal(true)
+    }
+  }
+
   const handleAddToLibrary = (bookId: string) => {
     if (!user) {
       setShowAuthModal(true)
@@ -114,7 +139,7 @@ export default function HomePage() {
     setUserLibIds(next)
     localStorage.setItem(`readora_user_library_${user.id}`, JSON.stringify(next))
     alert('Book aapki Library mein add kar di gayi hai!')
-    }
+}
 
   const handleToggleSave = (bookId: string) => {
     if (!user) {
@@ -207,9 +232,10 @@ export default function HomePage() {
       } else if (data?.user) {
         setUser(data.user)
         setShowAuthModal(false)
-        if (pendingRedirectToLibrary || sessionStorage.getItem('readora_pending_library') === 'true') {
-          sessionStorage.removeItem('readora_pending_library')
-          window.location.href = '/library'
+        const target = pendingRedirect || (typeof window !== 'undefined' && sessionStorage.getItem('readora_pending_target'))
+        if (target) {
+          sessionStorage.removeItem('readora_pending_target')
+          window.location.href = target
         }
       }
     }
@@ -243,8 +269,8 @@ export default function HomePage() {
           </div>
           <nav style={{ display: 'flex', gap: '20px', fontSize: '14px', fontWeight: '500' }}>
             <span style={{ color: '#fff', borderBottom: '2px solid #2563eb', paddingBottom: '4px', cursor: 'pointer' }} onClick={() => { setSelectedCategoryFilter(null); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Home</span>
-            <span style={{ color: '#94a3b8', cursor: 'pointer' }} onClick={() => user ? window.location.href = '/library' : setShowAuthModal(true)}>Library</span>
-            <span style={{ color: '#94a3b8', cursor: 'pointer' }} onClick={() => window.location.href = '/categories'}>Categories</span>
+            <span style={{ color: '#94a3b8', cursor: 'pointer' }} onClick={handleLibraryClick}>Library</span>
+            <span style={{ color: '#94a3b8', cursor: 'pointer' }} onClick={handleCategoryClick}>Categories</span>
           </nav>
         </div>
 
@@ -258,8 +284,8 @@ export default function HomePage() {
             </>
           ) : (
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => setShowAuthModal(true)} style={{ background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 14px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>Sign In</button>
-              <button onClick={() => setShowAuthModal(true)} style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>Get Started</button>
+              <button onClick={() => { setPendingRedirect(null); setShowAuthModal(true); }} style={{ background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 14px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>Sign In</button>
+              <button onClick={() => { setPendingRedirect(null); setShowAuthModal(true); }} style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>Get Started</button>
             </div>
           )}
         </div>
@@ -322,7 +348,7 @@ export default function HomePage() {
 
                   <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
                     <button onClick={() => handleToggleLike(book.id)} style={{ flex: 1, background: isLiked ? 'rgba(239,68,68,0.2)' : '#070b14', color: isLiked ? '#ef4444' : '#94a3b8', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '6px 0', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>{isLiked ? '❤️ Liked' : '🤍 Like'}</button>
-                    <button onClick={() => handleToggleSave(book.id)} style={{ flex: 1, background: isSaved ? 'rgba(56,189,248,0.2)' : '#070b14', color: isSaved ? '#38bdf8' : '#94a3b8', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '6px 0', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>{isSaved ? '🔖 Saved' : 'Save'}</button>
+                    <button onClick={() => handleToggleSave(book.id)} style={{ flex: 1, background: isSaved ? 'rgba(56,189,248,0.2)' : '#070b14', color: isSaved ? '#38bdf8' : '#94a3b8', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '6px 0', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>{isSaved ? '🔖 Saved' : 'Save'}喜</button>
                     <button onClick={() => executeFileDownload(book)} style={{ flex: 1.2, background: '#070b14', color: '#38bdf8', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '6px 0', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>📥 Download</button>
                   </div>
 
@@ -339,10 +365,10 @@ export default function HomePage() {
       {showAuthModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
           <div style={{ background: '#ffffff', borderRadius: '24px', padding: '30px 24px', width: '100%', maxWidth: '350px', textAlign: 'center', position: 'relative', color: '#0f172a' }}>
-            <button onClick={() => { setShowAuthModal(false); setPendingRedirectToLibrary(false); }} style={{ position: 'absolute', top: '14px', right: '16px', background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}>✕</button>
+            <button onClick={() => { setShowAuthModal(false); setPendingRedirect(null); }} style={{ position: 'absolute', top: '14px', right: '16px', background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}>✕</button>
             <div style={{ fontSize: '22px', marginBottom: '6px' }}>📖 Readora</div>
             <h3 style={{ fontSize: '18px', fontWeight: '700', margin: '0 0 4px' }}>{isSignUp ? 'Create an Account' : 'Welcome Back!'}</h3>
-            <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 18px' }}>Sign in to read books and access your library.</p>
+            <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 18px' }}>Sign in to access categories, books, and your library.</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <button onClick={() => handleOAuth('google')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#fff', color: '#0f172a', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>Continue with Google</button>
               <button onClick={() => handleOAuth('facebook')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px', borderRadius: '10px', border: 'none', background: '#1877F2', color: '#fff', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>Continue with Facebook</button>
@@ -365,4 +391,4 @@ export default function HomePage() {
       )}
     </div>
   )
-      }
+          }
