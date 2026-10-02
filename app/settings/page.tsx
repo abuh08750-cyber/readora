@@ -7,6 +7,8 @@ import NotificationDropdown from '@/components/NotificationDropdown'
 import ChangePasswordModal from '@/components/ChangePasswordModal'
 import HelpCenterModal from '@/components/HelpCenterModal'
 import TermsConditionsView from '@/components/TermsConditionsView'
+import PrivacyPolicyView from '@/components/PrivacyPolicyView'
+import WeatherTimeModal from '@/components/WeatherTimeModal'
 
 const SUPABASE_URL = 'https://stuabcdisgmmxprapfai.supabase.co'
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0dWFiY2Rpc2dtbXhwcmFwZmFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1Njc1NjksImV4cCI6MjEwNjE0MzU2OX0.pGvaQQBWGcbDKgDb_9F1jkUURVXH3bhJ-trQt-GXBZ8'
@@ -26,7 +28,6 @@ function hexToRgb(hex: string) {
   }
 }
 
-// Generate smart readable name from email if metadata is empty
 function formatNameFromEmail(email: string) {
   if (!email) return 'Readora Reader'
   const usernamePart = email.split('@')[0]
@@ -39,7 +40,6 @@ function formatNameFromEmail(email: string) {
     .join(' ')
 }
 
-// Generate random unique username (e.g., huzaifa_8472)
 function generateSmartUsername(email: string, fullName: string) {
   const base = (fullName || email.split('@')[0] || 'reader')
     .toLowerCase()
@@ -62,8 +62,8 @@ export default function SettingsPage() {
   const [savedSuccess, setSavedSuccess] = useState(false)
   const [headerAvatar, setHeaderAvatar] = useState<string | null>(null)
 
-  // Subview State: 'settings' ya 'terms'
-  const [currentView, setCurrentView] = useState<'settings' | 'terms'>('settings')
+  // Subview State: 'settings' | 'terms' | 'privacy'
+  const [currentView, setCurrentView] = useState<'settings' | 'terms' | 'privacy'>('settings')
 
   // Theme Settings
   const [activeTheme, setActiveTheme] = useState<'Dark' | 'Light' | 'Sepia' | 'Custom'>('Dark')
@@ -91,38 +91,45 @@ export default function SettingsPage() {
   // Modals
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false)
   const [isRecoveryFlow, setIsRecoveryFlow] = useState(false)
-  const [isHelpCenterOpen, setIsHelpCenterOpen] = useState(false)
-  const [activeModal, setActiveModal] = useState<'none' | '2fa' | 'activity'>('none')
-  const [is2FAEnabled, setIs2FAEnabled] = useState(false)
 
-  const setupUserProfile = (currentUser: any) => {
-    const userId = currentUser.id
-    const userEmail = currentUser.email || ''
-    const meta = currentUser.user_metadata || {}
+  // Live Weather condition detection for Header Icon
+  useEffect(() => {
+    async function detectLiveWeatherIcon(lat: number, lon: number) {
+      try {
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`)
+        if (!res.ok) return
+        const data = await res.json()
+        const weatherCode = data.current_weather?.weathercode ?? 0
+        const isDay = data.current_weather?.is_day ?? 1
 
-    // 1. Resolve Display Name (Facebook/Google metadata -> email -> fallback)
-    const detectedName = meta.full_name || meta.name || formatNameFromEmail(userEmail)
-    const storedName = localStorage.getItem(`readora_profile_fullname_${userId}`)
-    const finalName = storedName || detectedName
-
-    setFullName(finalName)
-    setSavedFullName(finalName)
-    setEmailVal(userEmail)
-
-    // 2. Resolve Username (Stored per user -> auto-generated)
-    let storedUsername = localStorage.getItem(`readora_profile_username_${userId}`)
-    if (!storedUsername) {
-      storedUsername = generateSmartUsername(userEmail, finalName)
-      localStorage.setItem(`readora_profile_username_${userId}`, storedUsername)
+        // WMO Weather Codes interpretation
+        if (weatherCode >= 51 && weatherCode <= 82) {
+          setWeatherIcon('🌧️') // Rain / Showers
+        } else if (weatherCode >= 95) {
+          setWeatherIcon('🌨️') // Storm / Heavy precipitation
+        } else if (weatherCode >= 1 && weatherCode <= 3) {
+          setWeatherIcon('☁️') // Cloud / Overcast
+        } else {
+          // Clear sky
+          setWeatherIcon(isDay === 1 ? '☀️' : '🌙')
+        }
+      } catch {
+        const hour = new Date().getHours()
+        setWeatherIcon(hour >= 18 || hour < 6 ? '🌙' : '☀️')
+      }
     }
-    setUsername(storedUsername)
-    setSavedUsername(storedUsername)
 
-    // 3. Resolve Avatar (Facebook/Google picture -> uploaded photo)
-    const socialAvatar = meta.avatar_url || meta.picture || null
-    const storedAvatar = localStorage.getItem(`readora_profile_avatar_${userId}`)
-    setHeaderAvatar(storedAvatar || socialAvatar || null)
-                             }
+    if (typeof window !== 'undefined' && 'geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => detectLiveWeatherIcon(pos.coords.latitude, pos.coords.longitude),
+        () => detectLiveWeatherIcon(11.2588, 75.7804), // Default Kozhikode coordinates
+        { timeout: 6000 }
+      )
+    } else {
+      const hour = new Date().getHours()
+      setWeatherIcon(hour >= 18 || hour < 6 ? '🌙' : '☀️')
+    }
+  }, [])
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -174,7 +181,135 @@ export default function SettingsPage() {
         if (parsed.readingMode) setReadingMode(parsed.readingMode)
         if (parsed.fontSize) setFontSize(parsed.fontSize)
         if (parsed.lineSpacing) setLineSpacing(parsed.lineSpacing)
+}
+  const [isHelpCenterOpen, setIsHelpCenterOpen] = useState(false)
+  const [isWeatherModalOpen, setIsWeatherModalOpen] = useState(false)
+  const [activeModal, setActiveModal] = useState<'none' | '2fa' | 'activity'>('none')
+  const [is2FAEnabled, setIs2FAEnabled] = useState(false)
+
+  // Dynamic Weather Icon based on live conditions
+  const [weatherIcon, setWeatherIcon] = useState('☀️')
+
+  const setupUserProfile = (currentUser: any) => {
+    const userId = currentUser.id
+    const userEmail = currentUser.email || ''
+    const meta = currentUser.user_metadata || {}
+
+    const detectedName = meta.full_name || meta.name || formatNameFromEmail(userEmail)
+    const storedName = localStorage.getItem(`readora_profile_fullname_${userId}`)
+    const finalName = storedName || detectedName
+
+    setFullName(finalName)
+    setSavedFullName(finalName)
+    setEmailVal(userEmail)
+
+    let storedUsername = localStorage.getItem(`readora_profile_username_${userId}`)
+    if (!storedUsername) {
+      storedUsername = generateSmartUsername(userEmail, finalName)
+      localStorage.setItem(`readora_profile_username_${userId}`, storedUsername)
+    }
+    setUsername(storedUsername)
+    setSavedUsername(storedUsername)
+
+    const socialAvatar = meta.avatar_url || meta.picture || null
+    const storedAvatar = localStorage.getItem(`readora_profile_avatar_${userId}`)
+    setHeaderAvatar(storedAvatar || socialAvatar || null)
+
+    // Load 2FA status for this specific user
+    const stored2FA = localStorage.getItem(`readora_2fa_enabled_${userId}`)
+    setIs2FAEnabled(stored2FA === 'true')
+}
+
+  // Live Weather condition detection for Header Icon
+  useEffect(() => {
+    async function detectLiveWeatherIcon(lat: number, lon: number) {
+      try {
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`)
+        if (!res.ok) return
+        const data = await res.json()
+        const weatherCode = data.current_weather?.weathercode ?? 0
+        const isDay = data.current_weather?.is_day ?? 1
+
+        // WMO Weather Codes interpretation
+        if (weatherCode >= 51 && weatherCode <= 82) {
+          setWeatherIcon('🌧️') // Rain / Showers
+        } else if (weatherCode >= 95) {
+          setWeatherIcon('🌨️') // Storm / Heavy precipitation
+        } else if (weatherCode >= 1 && weatherCode <= 3) {
+          setWeatherIcon('☁️') // Cloud / Overcast
+        } else {
+          // Clear sky
+          setWeatherIcon(isDay === 1 ? '☀️' : '🌙')
+        }
+      } catch {
+        const hour = new Date().getHours()
+        setWeatherIcon(hour >= 18 || hour < 6 ? '🌙' : '☀️')
       }
+    }
+
+    if (typeof window !== 'undefined' && 'geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => detectLiveWeatherIcon(pos.coords.latitude, pos.coords.longitude),
+        () => detectLiveWeatherIcon(11.2588, 75.7804), // Default Kozhikode coordinates
+        { timeout: 6000 }
+      )
+    } else {
+      const hour = new Date().getHours()
+      setWeatherIcon(hour >= 18 || hour < 6 ? '🌙' : '☀️')
+    }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash
+      if (hash && (hash.includes('type=recovery') || hash.includes('access_token='))) {
+        setIsRecoveryFlow(true)
+        setIsPasswordModalOpen(true)
+      }
+    }
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const isRecovery = typeof window !== 'undefined' && window.location.hash.includes('type=recovery')
+      if (!session?.user && !isRecovery) {
+        window.location.replace('/')
+        return
+      }
+      if (session?.user) {
+        setUser(session.user)
+        setupUserProfile(session.user)
+      }
+      setAuthChecking(false)
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsRecoveryFlow(true)
+        setIsPasswordModalOpen(true)
+        if (session?.user) setUser(session.user)
+      } else if (event === 'SIGNED_OUT' || !session?.user) {
+        const isRecovery = typeof window !== 'undefined' && window.location.hash.includes('type=recovery')
+        if (!isRecovery) {
+          window.location.replace('/')
+        }
+      } else if (session?.user) {
+        setUser(session.user)
+        setupUserProfile(session.user)
+      }
+    })
+
+    try {
+      const savedT = localStorage.getItem('readora_app_theme') as any
+      if (savedT) setActiveTheme(savedT)
+      const savedC = localStorage.getItem('readora_custom_color')
+      if (savedC) setCustomHex(savedC)
+
+      const savedPrefs = localStorage.getItem('readora_reading_prefs')
+      if (savedPrefs) {
+        const parsed = JSON.parse(savedPrefs)
+        if (parsed.readingMode) setReadingMode(parsed.readingMode)
+        if (parsed.fontSize) setFontSize(parsed.fontSize)
+        if (parsed.lineSpacing) setLineSpacing(parsed.lineSpacing)
+                    }
 
       const savedNotifs = localStorage.getItem('readora_notif_settings')
       if (savedNotifs) {
@@ -195,6 +330,14 @@ export default function SettingsPage() {
 
     return () => subscription.unsubscribe()
   }, [])
+
+  const handleToggle2FA = () => {
+    const nextState = !is2FAEnabled
+    setIs2FAEnabled(nextState)
+    if (user?.id) {
+      localStorage.setItem(`readora_2fa_enabled_${user.id}`, String(nextState))
+    }
+  }
 
   const toggleNotification = (key: 'releases' | 'reminders' | 'replies' | 'marketing') => {
     let nextReleases = notifReleases
@@ -244,7 +387,7 @@ export default function SettingsPage() {
         autoSavePos: nextAutoSave,
       }))
     } catch (e) {}
-    }
+        }
 
   const styles = (() => {
     if (activeTheme === 'Light') {
@@ -284,7 +427,7 @@ export default function SettingsPage() {
         card: `rgba(${Math.floor(r * 0.15 + 10)}, ${Math.floor(g * 0.15 + 14)}, ${Math.floor(b * 0.15 + 24)}, 0.85)`,
         inner: `rgba(${Math.floor(r * 0.08)}, ${Math.floor(g * 0.08)}, ${Math.floor(b * 0.08)}, 0.9)`,
         text: '#f8fafc',
-        muted: `rgba(${Math.min(r + 60, 240)}, ${Math.min(g + 60, 240)}, ${Math.min(b + 60, 240)}, 0.85)`,
+        muted: `rgba(${Math.min(r + 60, 240)}, ${Math.min(g + 60, 240)}, ${Math.min(g + 60, 240)}, 0.85)`,
         border: `rgba(${r}, ${g}, ${b}, 0.35)`,
         nav: customHex,
         accent: customHex,
@@ -393,20 +536,17 @@ export default function SettingsPage() {
     setTimeout(() => setSavedSuccess(false), 2500)
   }
 
-  // Complete Global Logout
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut({ scope: 'global' })
     } catch {}
 
     try {
-      // Clear all cached tokens & sessions
       sessionStorage.clear()
       const keysToRemove = Object.keys(localStorage).filter(k => k.startsWith('sb-') || k.startsWith('supabase.') || k.startsWith('readora_profile_'))
       keysToRemove.forEach(k => localStorage.removeItem(k))
     } catch {}
 
-    // Hard redirect to home and refresh auth state across all pages
     window.location.href = '/'
   }
 
@@ -416,7 +556,7 @@ export default function SettingsPage() {
         Verifying session...
       </div>
     )
-    }
+        }
 
   const avatarChar = fullName ? fullName.charAt(0).toUpperCase() : (emailVal ? emailVal.charAt(0).toUpperCase() : 'R')
 
@@ -504,8 +644,23 @@ export default function SettingsPage() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <span style={{ color: styles.muted, cursor: 'pointer', fontSize: '16px' }}>☀️</span>
+            {/* Dynamic Weather Icon that opens Weather Modal */}
+            <span
+              onClick={() => setIsWeatherModalOpen(true)}
+              style={{
+                cursor: 'pointer',
+                fontSize: '18px',
+                display: 'flex',
+                alignItems: 'center',
+                transition: 'transform 0.2s',
+              }}
+              title="Live Weather & Time"
+            >
+              {weatherIcon}
+            </span>
+
             <NotificationDropdown />
+
             <div style={{
               width: '34px',
               height: '34px',
@@ -527,20 +682,26 @@ export default function SettingsPage() {
           </div>
         </header>
 
-        {/* Content Dashboard */}
+        {/* Content Body: Terms | Privacy | Settings */}
         <div style={{ padding: '24px 28px 60px', maxWidth: '1280px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
           
           {currentView === 'terms' ? (
-            /* ================= DEDICATED TERMS & CONDITIONS VIEW ================= */
             <TermsConditionsView
               onBack={() => setCurrentView('settings')}
               onOpenSupport={() => setIsHelpCenterOpen(true)}
-              onOpenPrivacy={() => alert('Privacy Policy: Readora respects and protects your data privacy via encrypted Supabase storage.')}
+              onOpenPrivacy={() => setCurrentView('privacy')}
+              styles={styles}
+            />
+          ) : currentView === 'privacy' ? (
+            <PrivacyPolicyView
+              onBack={() => setCurrentView('settings')}
+              onOpenSupport={() => setIsHelpCenterOpen(true)}
+              onOpenTerms={() => setCurrentView('terms')}
               styles={styles}
             />
           ) : (
-            /* ================= REGULAR SETTINGS VIEW ================= */
             <>
+              {/* Settings Header */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -570,7 +731,7 @@ export default function SettingsPage() {
               {/* Cards Grid */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '18px' }}>
                 
-                {/* Card 1: Account Settings (Dynamic for Every User) */}
+                {/* Card 1: Account Settings */}
                 <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '20px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                     <span style={{ fontSize: '16px', color: styles.accent }}>👤</span>
@@ -712,7 +873,6 @@ export default function SettingsPage() {
                               fontSize: '11px',
                               fontWeight: 'bold',
                               cursor: 'pointer',
-                              boxShadow: activeTheme === t.name ? '0 0 10px rgba(0,0,0,0.3)' : 'none',
                               transform: activeTheme === t.name ? 'scale(1.05)' : 'scale(1)',
                               transition: '0.2s'
                             }}
@@ -816,7 +976,9 @@ export default function SettingsPage() {
                     <div onClick={() => setActiveModal('2fa')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '4px 0' }}>
                       <div>
                         <b style={{ fontSize: '12px', display: 'block' }}>Two-Factor Authentication (2FA)</b>
-                        <span style={{ fontSize: '10px', color: styles.muted }}>Add an extra layer of security</span>
+                        <span style={{ fontSize: '10px', color: is2FAEnabled ? '#10b981' : styles.muted }}>
+                          {is2FAEnabled ? 'Enabled' : 'Disabled'}
+                        </span>
                       </div>
                       <span style={{ color: styles.accent, fontWeight: 'bold' }}>›</span>
                     </div>
@@ -863,6 +1025,16 @@ export default function SettingsPage() {
                       </div>
                       <div onClick={() => toggleLibrarySetting('sync')} style={{ width: '38px', height: '22px', background: syncProgress ? styles.nav : styles.inner, borderRadius: '12px', position: 'relative', cursor: 'pointer', border: `1px solid ${styles.border}`, transition: '0.2s' }}>
                         <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: syncProgress ? '18px' : '2px', transition: '0.2s' }} />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <b style={{ fontSize: '12px', display: 'block' }}>Auto Save</b>
+                        <span style={{ fontSize: '10px', color: styles.muted }}>Save your reading position</span>
+                      </div>
+                      <div onClick={() => toggleLibrarySetting('autoSave')} style={{ width: '38px', height: '22px', background: autoSavePos ? styles.nav : styles.inner, borderRadius: '12px', position: 'relative', cursor: 'pointer', border: `1px solid ${styles.border}`, transition: '0.2s' }}>
+                        <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: autoSavePos ? '18px' : '2px', transition: '0.2s' }} />
                       </div>
                     </div>
 
@@ -924,13 +1096,25 @@ export default function SettingsPage() {
                       <span style={{ color: styles.accent, fontWeight: 'bold' }}>View ›</span>
                     </div>
 
-                    {/* 4. Privacy Policy */}
-                    <div onClick={() => alert('Privacy Policy: Readora respects your privacy. Your data is stored safely in Supabase with end-to-end security.')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                    {/* 4. Privacy Policy -> OPENS FULL PAGE COMPONENT */}
+                    <div
+                      onClick={() => setCurrentView('privacy')}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        cursor: 'pointer',
+                        background: 'rgba(56, 189, 248, 0.08)',
+                        padding: '8px 10px',
+                        borderRadius: '10px',
+                        border: '1px solid rgba(56, 189, 248, 0.2)'
+                      }}
+                    >
                       <div>
-                        <b style={{ fontSize: '12px', display: 'block' }}>Privacy Policy</b>
-                        <span style={{ fontSize: '10px', color: styles.muted }}>How we handle your data</span>
+                        <b style={{ fontSize: '12px', display: 'block', color: styles.accent }}>🛡️ Privacy Policy</b>
+                        <span style={{ fontSize: '10px', color: styles.muted }}>How we collect, store, and protect your data</span>
                       </div>
-                      <span style={{ color: styles.muted }}>›</span>
+                      <span style={{ color: styles.accent, fontWeight: 'bold' }}>View ›</span>
                     </div>
                   </div>
                 </div>
@@ -943,7 +1127,7 @@ export default function SettingsPage() {
 
       </main>
 
-      {/* Change / Reset Password Modal */}
+      {/* Change Password Modal */}
       <ChangePasswordModal
         isOpen={isPasswordModalOpen}
         onClose={() => { setIsPasswordModalOpen(false); setIsRecoveryFlow(false); }}
@@ -956,6 +1140,13 @@ export default function SettingsPage() {
         isOpen={isHelpCenterOpen}
         onClose={() => setIsHelpCenterOpen(false)}
         userEmail={user?.email || emailVal}
+      />
+
+      {/* Live Time & Weather Modal */}
+      <WeatherTimeModal
+        isOpen={isWeatherModalOpen}
+        onClose={() => setIsWeatherModalOpen(false)}
+        themeStyles={styles}
       />
 
       {/* 2FA Modal */}
@@ -974,7 +1165,7 @@ export default function SettingsPage() {
                 </span>
               </div>
               <button
-                onClick={() => setIs2FAEnabled(!is2FAEnabled)}
+                onClick={handleToggle2FA}
                 style={{
                   background: is2FAEnabled ? '#ef4444' : styles.nav,
                   color: '#fff',
@@ -999,18 +1190,21 @@ export default function SettingsPage() {
           <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '24px', maxWidth: '380px', width: '100%', position: 'relative' }}>
             <button onClick={() => setActiveModal('none')} style={{ position: 'absolute', top: '14px', right: '16px', background: 'none', border: 'none', color: styles.muted, fontSize: '18px', cursor: 'pointer' }}>✕</button>
             <b style={{ fontSize: '16px', color: styles.accent, display: 'block', marginBottom: '6px' }}>📱 Login Activity</b>
-            <p style={{ fontSize: '12px', color: styles.muted, margin: '0 0 16px' }}>Devices currently signed into this account.</p>
+            <p style={{ fontSize: '12px', color: styles.muted, margin: '0 0 16px' }}>Current active devices and session information.</p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ background: styles.inner, padding: '10px 12px', borderRadius: '8px', border: `1px solid ${styles.border}` }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ background: styles.inner, padding: '12px', borderRadius: '10px', border: `1px solid ${styles.border}` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                   <b style={{ fontSize: '12px' }}>Current Device</b>
                   <span style={{ fontSize: '10px', color: '#10b981', fontWeight: 'bold' }}>● Active Now</span>
                 </div>
-                <span style={{ fontSize: '11px', color: styles.muted, display: 'block', marginTop: '4px' }}>
-                  {typeof window !== 'undefined' ? window.navigator.userAgent.slice(0, 45) + '...' : 'Mobile Browser'}
+                <span style={{ fontSize: '11px', color: styles.text, display: 'block', marginBottom: '4px' }}>
+                  {typeof window !== 'undefined' ? window.navigator.userAgent.slice(0, 48) + '...' : 'Web Browser'}
                 </span>
-                <span style={{ fontSize: '10px', color: styles.muted }}>Signed in as: {user?.email}</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: styles.muted }}>
+                  <span>User: {user?.email}</span>
+                  <span>{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -1019,4 +1213,4 @@ export default function SettingsPage() {
 
     </div>
   )
-                  }
+      }
