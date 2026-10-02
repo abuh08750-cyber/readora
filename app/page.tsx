@@ -54,16 +54,13 @@ export default function HomePage() {
   const [headerAvatar, setHeaderAvatar] = useState<string | null>(null)
   const [pendingRedirectToLibrary, setPendingRedirectToLibrary] = useState(false)
 
-  // User Shelves (User specific persistence)
   const [userLibIds, setUserLibIds] = useState<string[]>([])
   const [savedIds, setSavedIds] = useState<string[]>([])
   const [likedIds, setLikedIds] = useState<string[]>([])
 
-  // Payment Modal state
   const [payModalBook, setPayModalBook] = useState<any>(null)
   const [paymentDone, setPaymentDone] = useState(false)
 
-  // Dynamic Theme
   const [themeMode, setThemeMode] = useState<'Dark' | 'Light' | 'Sepia' | 'Custom'>('Dark')
   const [customColor, setCustomColor] = useState('#6366f1')
 
@@ -76,7 +73,7 @@ export default function HomePage() {
       const l = localStorage.getItem(`rd_likes_${uid}`)
       if (l) setLikedIds(JSON.parse(l))
     } catch {}
-  }
+   }
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.location.search.includes('auth=required')) {
@@ -214,7 +211,6 @@ export default function HomePage() {
     }
   }
 
-  // 1. Add to Library logic
   const handleAddToLibrary = (bookId: string) => {
     if (!user) {
       setShowAuthModal(true)
@@ -226,31 +222,6 @@ export default function HomePage() {
     alert('Book aapki Library mein add kar di gayi hai!')
   }
 
-  // 2. Save logic (My Books shelf)
-  const handleToggleSave = (bookId: string) => {
-    if (!user) {
-      setShowAuthModal(true)
-      return
-    }
-    const next = savedIds.includes(bookId) ? savedIds.filter(id => id !== bookId) : [...savedIds, bookId]
-    setSavedIds(next)
-    localStorage.setItem(`rd_saves_${user.id}`, JSON.stringify(next))
-  }
-  
-
-  // 1. Add to Library logic
-  const handleAddToLibrary = (bookId: string) => {
-    if (!user) {
-      setShowAuthModal(true)
-      return
-    }
-    const next = userLibIds.includes(bookId) ? userLibIds : [...userLibIds, bookId]
-    setUserLibIds(next)
-    localStorage.setItem(`readora_user_library_${user.id}`, JSON.stringify(next))
-    alert('Book aapki Library mein add kar di gayi hai!')
-  }
-
-  // 2. Save logic (My Books shelf)
   const handleToggleSave = (bookId: string) => {
     if (!user) {
       setShowAuthModal(true)
@@ -261,7 +232,6 @@ export default function HomePage() {
     localStorage.setItem(`rd_saves_${user.id}`, JSON.stringify(next))
   }
 
-  // 3. Like logic
   const handleToggleLike = (bookId: string) => {
     if (!user) {
       setShowAuthModal(true)
@@ -272,7 +242,6 @@ export default function HomePage() {
     localStorage.setItem(`rd_likes_${user.id}`, JSON.stringify(next))
   }
 
-  // 4. Download Execution
   const executeFileDownload = (book: any) => {
     const raw = book.file_path || book.file_url || 'https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/ebooks/1790700034105-biegrb.html'
     const full = raw.startsWith('http') ? raw : `https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/ebooks/${raw}`
@@ -285,7 +254,6 @@ export default function HomePage() {
     document.body.removeChild(a)
   }
 
-  // 5. Download Trigger Check (Free vs Paid)
   const handleDownload = (book: any) => {
     if (!user) {
       setShowAuthModal(true)
@@ -328,7 +296,7 @@ export default function HomePage() {
         }
       }
     }
-  }
+        }
 
   const handleRead = async (book: any) => {
     if (!user) {
@@ -378,7 +346,7 @@ export default function HomePage() {
         <iframe srcDoc={htmlData} style={{ width: '100%', flex: 1, border: 'none' }} title={readingTitle} />
       </div>
     )
-      }
+  }
 
   return (
     <div style={{ backgroundColor: styles.bg, color: styles.text, minHeight: '100vh', width: '100%', overflowX: 'hidden', fontFamily: 'system-ui, -apple-system, sans-serif', transition: 'all 0.25s ease' }}>
@@ -527,7 +495,6 @@ export default function HomePage() {
                     {book.author || 'Readora'}
                   </p>
 
-                  {/* Pricing / Access Tag */}
                   <div style={{ marginBottom: '10px' }}>
                     {book.is_paid && Number(book.price) > 0 ? (
                       <span style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold' }}>
@@ -540,7 +507,6 @@ export default function HomePage() {
                     )}
                   </div>
 
-                  {/* Like, Save, Download Controls */}
                   <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
                     <button onClick={() => handleToggleLike(book.id)} style={{ flex: 1, background: isLiked ? 'rgba(239,68,68,0.2)' : styles.inner, color: isLiked ? '#ef4444' : styles.muted, border: `1px solid ${styles.border}`, borderRadius: '6px', padding: '5px 0', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>
                       {isLiked ? '❤️ Liked' : '🤍 Like'}
@@ -553,7 +519,6 @@ export default function HomePage() {
                     </button>
                   </div>
 
-                  {/* Read Button */}
                   <button
                     onClick={() => handleRead(book)}
                     style={{ width: '100%', background: styles.nav, color: '#fff', border: 'none', padding: '8px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', marginBottom: '6px' }}
@@ -561,7 +526,6 @@ export default function HomePage() {
                     📖 Read Book
                   </button>
 
-                  {/* Add to Library Button */}
                   <button
                     onClick={() => handleAddToLibrary(book.id)}
                     style={{ width: '100%', background: inLib ? 'rgba(16,185,129,0.15)' : styles.inner, color: inLib ? '#10b981' : styles.muted, border: `1px solid ${styles.border}`, padding: '7px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', fontWeight: '600' }}
@@ -682,4 +646,4 @@ export default function HomePage() {
       )}
     </div>
   )
-      }
+            }
