@@ -154,16 +154,6 @@ export default function HomePage() {
     const next = likedIds.includes(bookId) ? likedIds.filter((id) => id !== bookId) : [...likedIds, bookId]
     setLikedIds(next)
     localStorage.setItem(`rd_likes_${user.id}`, JSON.stringify(next))
-                                                     }
-
-  const handleToggleLike = (bookId: string) => {
-    if (!user) {
-      setShowAuthModal(true)
-      return
-    }
-    const next = likedIds.includes(bookId) ? likedIds.filter((id) => id !== bookId) : [...likedIds, bookId]
-    setLikedIds(next)
-    localStorage.setItem(`rd_likes_${user.id}`, JSON.stringify(next))
   }
 
   const executeFileDownload = async (book: any) => {
@@ -188,31 +178,7 @@ export default function HomePage() {
     } catch {
       window.open(full, '_blank')
     }
-  }
-
-  const handleRead = async (book: any) => {
-    if (!user) {
-      setShowAuthModal(true)
-      return
-    }
-    const rawFile = book.file_path || book.file_url || 'https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/ebooks/1790700034105-biegrb.html'
-    const fullUrl = rawFile.startsWith('http') ? rawFile : `https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/ebooks/${rawFile}`
-
-    setReadingTitle(book.title || 'Book Reader')
-
-    if (fullUrl.includes('.html')) {
-      try {
-        const res = await fetch(fullUrl)
-        const text = await res.text()
-        setHtmlData(text)
-        setReadingFile(fullUrl)
-      } catch {
-        window.open(fullUrl, '_blank')
-      }
-    } else {
-      window.open(fullUrl, '_blank')
-    }
-  }
+}
 
   const handleOAuth = async (provider: 'google' | 'facebook') => {
     setAuthError('')
@@ -378,4 +344,4 @@ export default function HomePage() {
       />
     </div>
   )
-      }
+                                                                                       }
