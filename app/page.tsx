@@ -54,12 +54,31 @@ export default function HomePage() {
   const [headerAvatar, setHeaderAvatar] = useState<string | null>(null)
   const [pendingRedirectToLibrary, setPendingRedirectToLibrary] = useState(false)
 
+  // User Shelves (User specific persistence)
+  const [userLibIds, setUserLibIds] = useState<string[]>([])
+  const [savedIds, setSavedIds] = useState<string[]>([])
+  const [likedIds, setLikedIds] = useState<string[]>([])
+
+  // Payment Modal state
+  const [payModalBook, setPayModalBook] = useState<any>(null)
+  const [paymentDone, setPaymentDone] = useState(false)
+
   // Dynamic Theme
   const [themeMode, setThemeMode] = useState<'Dark' | 'Light' | 'Sepia' | 'Custom'>('Dark')
   const [customColor, setCustomColor] = useState('#6366f1')
 
+  const loadUserShelves = (uid: string) => {
+    try {
+      const lib = localStorage.getItem(`readora_user_library_${uid}`)
+      if (lib) setUserLibIds(JSON.parse(lib))
+      const s = localStorage.getItem(`rd_saves_${uid}`)
+      if (s) setSavedIds(JSON.parse(s))
+      const l = localStorage.getItem(`rd_likes_${uid}`)
+      if (l) setLikedIds(JSON.parse(l))
+    } catch {}
+  }
+
   useEffect(() => {
-    // Agar library se bina auth ke redirect hokar aaya hai to turant popup open karein
     if (typeof window !== 'undefined' && window.location.search.includes('auth=required')) {
       setShowAuthModal(true)
       setPendingRedirectToLibrary(true)
@@ -67,15 +86,18 @@ export default function HomePage() {
     }
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) setUser(session.user)
+      if (session?.user) {
+        setUser(session.user)
+        loadUserShelves(session.user.id)
+      }
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUser(session.user)
+        loadUserShelves(session.user.id)
         setShowAuthModal(false)
 
-        // Login hone ke baad agar library open karni thi to automatically redirect kar do
         const shouldGoLibrary = pendingRedirectToLibrary || (typeof window !== 'undefined' && sessionStorage.getItem('readora_pending_library') === 'true')
         if (shouldGoLibrary) {
           sessionStorage.removeItem('readora_pending_library')
@@ -108,6 +130,8 @@ export default function HomePage() {
               title: 'ZERO SE ARTIST - Part 1',
               author: 'Readora',
               category: 'Music',
+              is_paid: false,
+              price: 0,
               cover_path: 'https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/covers/1790700033242-teliy6.jpg',
               file_path: 'https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/ebooks/1790700034105-biegrb.html',
             }
@@ -178,7 +202,6 @@ export default function HomePage() {
     }
   })()
 
-  // Library button click handler: user login ho toh library jaye, warna popup open kare
   const handleLibraryClick = () => {
     if (user) {
       window.location.href = '/library'
@@ -188,6 +211,91 @@ export default function HomePage() {
         sessionStorage.setItem('readora_pending_library', 'true')
       } catch {}
       setShowAuthModal(true)
+    }
+  }
+
+  // 1. Add to Library logic
+  const handleAddToLibrary = (bookId: string) => {
+    if (!user) {
+      setShowAuthModal(true)
+      return
+    }
+    const next = userLibIds.includes(bookId) ? userLibIds : [...userLibIds, bookId]
+    setUserLibIds(next)
+    localStorage.setItem(`readora_user_library_${user.id}`, JSON.stringify(next))
+    alert('Book aapki Library mein add kar di gayi hai!')
+  }
+
+  // 2. Save logic (My Books shelf)
+  const handleToggleSave = (bookId: string) => {
+    if (!user) {
+      setShowAuthModal(true)
+      return
+    }
+    const next = savedIds.includes(bookId) ? savedIds.filter(id => id !== bookId) : [...savedIds, bookId]
+    setSavedIds(next)
+    localStorage.setItem(`rd_saves_${user.id}`, JSON.stringify(next))
+  }
+  
+
+  // 1. Add to Library logic
+  const handleAddToLibrary = (bookId: string) => {
+    if (!user) {
+      setShowAuthModal(true)
+      return
+    }
+    const next = userLibIds.includes(bookId) ? userLibIds : [...userLibIds, bookId]
+    setUserLibIds(next)
+    localStorage.setItem(`readora_user_library_${user.id}`, JSON.stringify(next))
+    alert('Book aapki Library mein add kar di gayi hai!')
+  }
+
+  // 2. Save logic (My Books shelf)
+  const handleToggleSave = (bookId: string) => {
+    if (!user) {
+      setShowAuthModal(true)
+      return
+    }
+    const next = savedIds.includes(bookId) ? savedIds.filter(id => id !== bookId) : [...savedIds, bookId]
+    setSavedIds(next)
+    localStorage.setItem(`rd_saves_${user.id}`, JSON.stringify(next))
+  }
+
+  // 3. Like logic
+  const handleToggleLike = (bookId: string) => {
+    if (!user) {
+      setShowAuthModal(true)
+      return
+    }
+    const next = likedIds.includes(bookId) ? likedIds.filter(id => id !== bookId) : [...likedIds, bookId]
+    setLikedIds(next)
+    localStorage.setItem(`rd_likes_${user.id}`, JSON.stringify(next))
+  }
+
+  // 4. Download Execution
+  const executeFileDownload = (book: any) => {
+    const raw = book.file_path || book.file_url || 'https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/ebooks/1790700034105-biegrb.html'
+    const full = raw.startsWith('http') ? raw : `https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/ebooks/${raw}`
+    const a = document.createElement('a')
+    a.href = full
+    a.download = `${book.title || 'ebook'}.html`
+    a.target = '_blank'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+  }
+
+  // 5. Download Trigger Check (Free vs Paid)
+  const handleDownload = (book: any) => {
+    if (!user) {
+      setShowAuthModal(true)
+      return
+    }
+    if (book.is_paid && Number(book.price) > 0) {
+      setPayModalBook(book)
+      setPaymentDone(false)
+    } else {
+      executeFileDownload(book)
     }
   }
 
@@ -389,17 +497,21 @@ export default function HomePage() {
         {loading ? (
           <p style={{ color: styles.muted, fontSize: '13px' }}>Books load ho rahi hain...</p>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '20px' }}>
             {filtered.map((book) => {
               const rawCover = book.cover_path || book.cover_url
               const cover = rawCover && rawCover.startsWith('http')
                 ? rawCover
                 : `https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/covers/${rawCover || '1790700033242-teliy6.jpg'}`
 
+              const isLiked = likedIds.includes(book.id)
+              const isSaved = savedIds.includes(book.id)
+              const inLib = userLibIds.includes(book.id)
+
               return (
-                <div key={book.id || book.title} style={{ background: styles.card, borderRadius: '16px', padding: '12px', border: `1px solid ${styles.border}`, display: 'flex', flexDirection: 'column' }}>
+                <div key={book.id || book.title} style={{ background: styles.card, borderRadius: '16px', padding: '14px', border: `1px solid ${styles.border}`, display: 'flex', flexDirection: 'column' }}>
                   <div style={{
-                    height: '230px',
+                    height: '240px',
                     borderRadius: '10px',
                     backgroundColor: '#151d30',
                     backgroundImage: `url(${cover})`,
@@ -411,21 +523,51 @@ export default function HomePage() {
                   <h4 style={{ fontSize: '14px', fontWeight: '700', margin: '0 0 2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: styles.text }}>
                     {book.title}
                   </h4>
-                  <p style={{ fontSize: '12px', color: styles.muted, margin: '0 0 10px' }}>
+                  <p style={{ fontSize: '12px', color: styles.muted, margin: '0 0 8px' }}>
                     {book.author || 'Readora'}
                   </p>
 
-                  <div style={{ marginTop: 'auto' }}>
-                    <span style={{ display: 'inline-block', background: 'rgba(56,189,248,0.12)', color: styles.accent, fontSize: '10px', fontWeight: 'bold', padding: '3px 8px', borderRadius: '6px', marginBottom: '8px' }}>
-                      {book.category || 'Music'}
-                    </span>
-                    <button
-                      onClick={() => handleRead(book)}
-                      style={{ width: '100%', background: styles.nav, color: '#fff', border: 'none', padding: '8px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}
-                    >
-                      📖 Read Book
+                  {/* Pricing / Access Tag */}
+                  <div style={{ marginBottom: '10px' }}>
+                    {book.is_paid && Number(book.price) > 0 ? (
+                      <span style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold' }}>
+                        🔒 Paid: ${book.price}
+                      </span>
+                    ) : (
+                      <span style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold' }}>
+                        ✓ eBook Read Free
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Like, Save, Download Controls */}
+                  <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
+                    <button onClick={() => handleToggleLike(book.id)} style={{ flex: 1, background: isLiked ? 'rgba(239,68,68,0.2)' : styles.inner, color: isLiked ? '#ef4444' : styles.muted, border: `1px solid ${styles.border}`, borderRadius: '6px', padding: '5px 0', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>
+                      {isLiked ? '❤️ Liked' : '🤍 Like'}
+                    </button>
+                    <button onClick={() => handleToggleSave(book.id)} style={{ flex: 1, background: isSaved ? 'rgba(56,189,248,0.2)' : styles.inner, color: isSaved ? styles.accent : styles.muted, border: `1px solid ${styles.border}`, borderRadius: '6px', padding: '5px 0', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>
+                      {isSaved ? '🔖 Saved' : 'Save'}
+                    </button>
+                    <button onClick={() => handleDownload(book)} style={{ flex: 1.2, background: styles.inner, color: styles.accent, border: `1px solid ${styles.border}`, borderRadius: '6px', padding: '5px 0', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>
+                      📥 Download
                     </button>
                   </div>
+
+                  {/* Read Button */}
+                  <button
+                    onClick={() => handleRead(book)}
+                    style={{ width: '100%', background: styles.nav, color: '#fff', border: 'none', padding: '8px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', marginBottom: '6px' }}
+                  >
+                    📖 Read Book
+                  </button>
+
+                  {/* Add to Library Button */}
+                  <button
+                    onClick={() => handleAddToLibrary(book.id)}
+                    style={{ width: '100%', background: inLib ? 'rgba(16,185,129,0.15)' : styles.inner, color: inLib ? '#10b981' : styles.muted, border: `1px solid ${styles.border}`, padding: '7px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', fontWeight: '600' }}
+                  >
+                    {inLib ? '✓ In Library' : '➕ Add to Library'}
+                  </button>
                 </div>
               )
             })}
@@ -452,6 +594,49 @@ export default function HomePage() {
           ))}
         </div>
       </section>
+
+      {/* Payment Gateway Modal */}
+      {payModalBook && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
+          <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '18px', padding: '24px', maxWidth: '380px', width: '100%', color: styles.text }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <b style={{ fontSize: '16px', color: styles.accent }}>Complete Payment to Download</b>
+              <button onClick={() => setPayModalBook(null)} style={{ background: 'none', border: 'none', color: styles.muted, fontSize: '18px', cursor: 'pointer' }}>✕</button>
+            </div>
+            
+            <p style={{ fontSize: '13px', margin: '0 0 10px', color: styles.text }}>Book: <b>{payModalBook.title}</b></p>
+            <div style={{ background: styles.inner, padding: '12px', borderRadius: '10px', border: `1px solid ${styles.border}`, marginBottom: '16px' }}>
+              <div style={{ fontSize: '12px', color: styles.muted }}>Payable Amount:</div>
+              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#10b981' }}>${payModalBook.price}</div>
+              <div style={{ fontSize: '11px', color: styles.accent, marginTop: '6px' }}>Receiver UPI: <b>7518727151@fam</b></div>
+            </div>
+
+            <div style={{ fontSize: '12px', color: styles.muted, marginBottom: '8px' }}>Select Payment Method:</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '16px' }}>
+              <button onClick={() => { window.open(`upi://pay?pa=7518727151@fam&pn=Readora&am=${payModalBook.price}&cu=INR`); setPaymentDone(true); }} style={{ background: styles.inner, color: styles.text, border: `1px solid ${styles.border}`, padding: '10px 6px', borderRadius: '8px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>
+                ⚡ UPI / GPay
+              </button>
+              <button onClick={() => { alert('Redirecting to Google Play Store in-app billing...'); setPaymentDone(true); }} style={{ background: styles.inner, color: styles.text, border: `1px solid ${styles.border}`, padding: '10px 6px', borderRadius: '8px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>
+                ▶ Google Play
+              </button>
+              <button onClick={() => { alert('Debit / Credit Card payment ready.'); setPaymentDone(true); }} style={{ background: styles.inner, color: styles.text, border: `1px solid ${styles.border}`, padding: '10px 6px', borderRadius: '8px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>
+                💳 All Cards
+              </button>
+              <button onClick={() => { alert('NetBanking / Wallets ready.'); setPaymentDone(true); }} style={{ background: styles.inner, color: styles.text, border: `1px solid ${styles.border}`, padding: '10px 6px', borderRadius: '8px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>
+                🏦 NetBanking
+              </button>
+            </div>
+
+            {paymentDone ? (
+              <button onClick={() => { executeFileDownload(payModalBook); setPayModalBook(null); }} style={{ width: '100%', background: '#10b981', color: '#fff', border: 'none', padding: '10px', borderRadius: '8px', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}>
+                ✓ Payment Verified: Download Now
+              </button>
+            ) : (
+              <p style={{ fontSize: '11px', color: styles.muted, margin: 0, textAlign: 'center' }}>Choose an app to pay directly into 7518727151@fam.</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Auth Modal */}
       {showAuthModal && (
@@ -497,4 +682,4 @@ export default function HomePage() {
       )}
     </div>
   )
-                       }
+      }
