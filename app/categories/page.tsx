@@ -11,67 +11,67 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
 })
 
-const categoriesList = [
-  { name: 'Fiction', icon: '📕', count: '1,245 books', group: 'Fiction' },
-  { name: 'Non-Fiction', icon: '📖', count: '982 books', group: 'Non-Fiction' },
-  { name: 'Romance', icon: '❤️', count: '684 books', group: 'Fiction' },
-  { name: 'Mystery', icon: '🔍', count: '523 books', group: 'Fiction' },
-  { name: 'Thriller', icon: '🕵️', count: '448 books', group: 'Fiction' },
-  { name: 'Crime', icon: '🚧', count: '372 books', group: 'Fiction' },
-  { name: 'Horror', icon: '💀', count: '356 books', group: 'Fiction' },
-  { name: 'Fantasy', icon: '🐉', count: '612 books', group: 'Fiction' },
-  { name: 'Science Fiction', icon: '🪐', count: '498 books', group: 'Science & Tech' },
-  { name: 'Adventure', icon: '🏔️', count: '421 books', group: 'Fiction' },
-  { name: 'Historical Fiction', icon: '🏰', count: '367 books', group: 'Fiction' },
-  { name: 'Historical', icon: '🏛️', count: '315 books', group: 'Non-Fiction' },
-  { name: 'Biography', icon: '👤', count: '298 books', group: 'Non-Fiction' },
-  { name: 'Autobiography', icon: '✍️', count: '244 books', group: 'Non-Fiction' },
-  { name: 'Memoir', icon: '📔', count: '221 books', group: 'Non-Fiction' },
-  { name: 'Self-Help', icon: '🌱', count: '412 books', group: 'Health & Wellness' },
-  { name: 'Personal Development', icon: '📈', count: '368 books', group: 'Health & Wellness' },
-  { name: 'Motivation', icon: '☀️', count: '287 books', group: 'Health & Wellness' },
-  { name: 'Psychology', icon: '🧠', count: '333 books', group: 'Health & Wellness' },
-  { name: 'Philosophy', icon: '🗿', count: '265 books', group: 'Non-Fiction' },
-  { name: 'Spirituality', icon: '🪷', count: '198 books', group: 'Health & Wellness' },
-  { name: 'Religion', icon: '🙏', count: '276 books', group: 'Non-Fiction' },
-  { name: 'Health & Wellness', icon: '❤️‍‍🩹', count: '342 books', group: 'Health & Wellness' },
-  { name: 'Fitness', icon: '🏋️', count: '241 books', group: 'Health & Wellness' },
-  { name: 'Nutrition', icon: '🥗', count: '208 books', group: 'Health & Wellness' },
-  { name: 'Business', icon: '💼', count: '465 books', group: 'Business' },
-  { name: 'Entrepreneurship', icon: '🚀', count: '398 books', group: 'Business' },
-  { name: 'Finance & Investing', icon: '🪙', count: '352 books', group: 'Business' },
-  { name: 'Economics', icon: '📊', count: '298 books', group: 'Business' },
-  { name: 'Marketing', icon: '📢', count: '276 books', group: 'Business' },
-  { name: 'Management', icon: '👥', count: '243 books', group: 'Business' },
-  { name: 'Technology', icon: '💻', count: '512 books', group: 'Science & Tech' },
-  { name: 'Programming & Coding', icon: '👨‍💻', count: '438 books', group: 'Science & Tech' },
-  { name: 'Artificial Intelligence', icon: '🤖', count: '321 books', group: 'Science & Tech' },
-  { name: 'Science', icon: '🔬', count: '487 books', group: 'Science & Tech' },
-  { name: 'Mathematics', icon: 'π', count: '365 books', group: 'Science & Tech' },
-  { name: 'Education', icon: '🎓', count: '298 books', group: 'Non-Fiction' },
-  { name: 'Study Guides', icon: '📚', count: '276 books', group: 'Non-Fiction' },
-  { name: 'Competitive Exams', icon: '🎯', count: '243 books', group: 'Non-Fiction' },
-  { name: 'Career & Jobs', icon: '👔', count: '312 books', group: 'Business' },
-  { name: 'Communication Skills', icon: '💬', count: '287 books', group: 'Health & Wellness' },
-  { name: 'Language Learning', icon: '🗣️', count: '241 books', group: 'Non-Fiction' },
-  { name: 'Literature', icon: '🪶', count: '356 books', group: 'Fiction' },
-  { name: 'Poetry', icon: '📜', count: '198 books', group: 'Fiction' },
-  { name: 'Short Stories', icon: '📑', count: '254 books', group: 'Fiction' },
-  { name: 'Essays', icon: '📄', count: '187 books', group: 'Non-Fiction' },
-  { name: 'Politics & Society', icon: '🏛️', count: '276 books', group: 'Non-Fiction' },
-  { name: 'Law', icon: '⚖️', count: '223 books', group: 'Non-Fiction' },
-  { name: 'Travel', icon: '✈️', count: '342 books', group: 'Non-Fiction' },
-  { name: 'Cooking & Food', icon: '🍳', count: '298 books', group: 'Health & Wellness' },
-  { name: 'Parenting & Family', icon: '👨‍👩‍👧', count: '265 books', group: 'Health & Wellness' },
-  { name: "Children's Books", icon: '🧸', count: '412 books', group: 'Fiction' },
-  { name: 'Young Adult', icon: '🧑', count: '376 books', group: 'Fiction' },
-  { name: 'Art & Design', icon: '🎨', count: '298 books', group: 'Non-Fiction' },
-  { name: 'Music', icon: '🎵', count: '254 books', group: 'Non-Fiction' },
-  { name: 'Photography', icon: '📷', count: '213 books', group: 'Non-Fiction' },
-  { name: 'Environment & Nature', icon: '🌿', count: '187 books', group: 'Science & Tech' },
-  { name: 'True Stories', icon: '📰', count: '276 books', group: 'Non-Fiction' },
-  { name: 'Productivity', icon: '✅', count: '322 books', group: 'Health & Wellness' },
-  { name: 'Indian Literature', icon: '🪷', count: '298 books', group: 'Fiction' },
+const categoriesData = [
+  { name: 'Fiction', icon: '📕', group: 'Fiction' },
+  { name: 'Non-Fiction', icon: '📖', group: 'Non-Fiction' },
+  { name: 'Romance', icon: '❤️', group: 'Fiction' },
+  { name: 'Mystery', icon: '🔍', group: 'Fiction' },
+  { name: 'Thriller', icon: '🕵️', group: 'Fiction' },
+  { name: 'Crime', icon: '🚧', group: 'Fiction' },
+  { name: 'Horror', icon: '💀', group: 'Fiction' },
+  { name: 'Fantasy', icon: '🐉', group: 'Fiction' },
+  { name: 'Science Fiction', icon: '🪐', group: 'Science & Tech' },
+  { name: 'Adventure', icon: '🏔️️', group: 'Fiction' },
+  { name: 'Historical Fiction', icon: '🏰', group: 'Fiction' },
+  { name: 'Historical', icon: '🏛️', group: 'Non-Fiction' },
+  { name: 'Biography', icon: '👤', group: 'Non-Fiction' },
+  { name: 'Autobiography', icon: '✍️', group: 'Non-Fiction' },
+  { name: 'Memoir', icon: '📔', group: 'Non-Fiction' },
+  { name: 'Self-Help', icon: '🌱', group: 'Health & Wellness' },
+  { name: 'Personal Development', icon: '📈', group: 'Health & Wellness' },
+  { name: 'Motivation', icon: '☀️', group: 'Health & Wellness' },
+  { name: 'Psychology', icon: '🧠', group: 'Health & Wellness' },
+  { name: 'Philosophy', icon: '🗿', group: 'Non-Fiction' },
+  { name: 'Spirituality', icon: '🪷', group: 'Health & Wellness' },
+  { name: 'Religion', icon: '🙏', group: 'Non-Fiction' },
+  { name: 'Health & Wellness', icon: '❤️‍🩹', group: 'Health & Wellness' },
+  { name: 'Fitness', icon: '🏋️', group: 'Health & Wellness' },
+  { name: 'Nutrition', icon: '🥗', group: 'Health & Wellness' },
+  { name: 'Business', icon: '💼', group: 'Business' },
+  { name: 'Entrepreneurship', icon: '🚀', group: 'Business' },
+  { name: 'Finance & Investing', icon: '🪙', group: 'Business' },
+  { name: 'Economics', icon: '📊', group: 'Business' },
+  { name: 'Marketing', icon: '📢', group: 'Business' },
+  { name: 'Management', icon: '👥', group: 'Business' },
+  { name: 'Technology', icon: '💻', group: 'Science & Tech' },
+  { name: 'Programming & Coding', icon: '👨‍💻', group: 'Science & Tech' },
+  { name: 'Artificial Intelligence', icon: '🤖', group: 'Science & Tech' },
+  { name: 'Science', icon: '🔬', group: 'Science & Tech' },
+  { name: 'Mathematics', icon: 'π', group: 'Science & Tech' },
+  { name: 'Education', icon: '🎓', group: 'Non-Fiction' },
+  { name: 'Study Guides', icon: '📚', group: 'Non-Fiction' },
+  { name: 'Competitive Exams', icon: '🎯', group: 'Non-Fiction' },
+  { name: 'Career & Jobs', icon: '👔', group: 'Business' },
+  { name: 'Communication Skills', icon: '💬', group: 'Health & Wellness' },
+  { name: 'Language Learning', icon: '🗣️', group: 'Non-Fiction' },
+  { name: 'Literature', icon: '🪶', group: 'Fiction' },
+  { name: 'Poetry', icon: '📜', group: 'Fiction' },
+  { name: 'Short Stories', icon: '📑', group: 'Fiction' },
+  { name: 'Essays', icon: '📄', group: 'Non-Fiction' },
+  { name: 'Politics & Society', icon: '🏛️', group: 'Non-Fiction' },
+  { name: 'Law', icon: '⚖️', group: 'Non-Fiction' },
+  { name: 'Travel', icon: '✈️', group: 'Non-Fiction' },
+  { name: 'Cooking & Food', icon: '🍳', group: 'Health & Wellness' },
+  { name: 'Parenting & Family', icon: '👨‍👩‍👧', group: 'Health & Wellness' },
+  { name: "Children's Books", icon: '🧸', group: 'Fiction' },
+  { name: 'Young Adult', icon: '🧑', group: 'Fiction' },
+  { name: 'Art & Design', icon: '🎨', group: 'Non-Fiction' },
+  { name: 'Music', icon: '🎵', group: 'Non-Fiction' },
+  { name: 'Photography', icon: '📷', group: 'Non-Fiction' },
+  { name: 'Environment & Nature', icon: '🌿', group: 'Science & Tech' },
+  { name: 'True Stories', icon: '📰', group: 'Non-Fiction' },
+  { name: 'Productivity', icon: '✅', group: 'Health & Wellness' },
+  { name: 'Indian Literature', icon: '🪷', group: 'Fiction' },
 ]
 
 export default function CategoriesPage() {
@@ -79,6 +79,9 @@ export default function CategoriesPage() {
   const [search, setSearch] = useState('')
   const [selectedGroup, setSelectedGroup] = useState('All')
   const [headerAvatar, setHeaderAvatar] = useState<string | null>(null)
+  
+  // Real database counts per category
+  const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({})
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -88,11 +91,30 @@ export default function CategoriesPage() {
         setHeaderAvatar(stored || session.user.user_metadata?.avatar_url || null)
       }
     })
+
+    fetchLiveCategoryCounts()
   }, [])
+
+  // Supabase se books fetch karke exact real count calculate karna
+  async function fetchLiveCategoryCounts() {
+    try {
+      const { data, error } = await supabase.from('books').select('category')
+      if (!error && data) {
+        const counts: Record<string, number> = {}
+        data.forEach((book: { category: string }) => {
+          if (book.category) {
+            const key = book.category.trim().toLowerCase()
+            counts[key] = (counts[key] || 0) + 1
+          }
+        })
+        setCategoryCounts(counts)
+      }
+    } catch {}
+  }
 
   const groups = ['All', 'Fiction', 'Non-Fiction', 'Science & Tech', 'Business', 'Health & Wellness']
 
-  const filteredCategories = categoriesList.filter((item) => {
+  const filteredCategories = categoriesData.filter((item) => {
     const matchSearch = item.name.toLowerCase().includes(search.toLowerCase())
     const matchGroup = selectedGroup === 'All' || item.group === selectedGroup
     return matchSearch && matchGroup
@@ -188,44 +210,52 @@ export default function CategoriesPage() {
                   whiteSpace: 'nowrap',
                 }}
               >
-                {grp === 'All' ? `All Categories (${categoriesList.length})` : grp}
+                {grp === 'All' ? `All Categories (${categoriesData.length})` : grp}
               </button>
             ))}
           </div>
 
-          {/* Categories 6-Column Grid Layout */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '14px' }}>
-            {filteredCategories.map((cat) => (
-              <div
-                key={cat.name}
-                onClick={() => window.location.href = `/?category=${encodeURIComponent(cat.name)}`}
-                style={{
-                  background: '#091024',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                  borderRadius: '14px',
-                  padding: '14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#2563eb')}
-                onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)')}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-                  <span style={{ fontSize: '20px' }}>{cat.icon}</span>
-                  <div style={{ minWidth: 0 }}>
-                    <b style={{ fontSize: '13px', display: 'block', color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cat.name}</b>
-                    <span style={{ fontSize: '10px', color: '#64748b' }}>{cat.count}</span>
+          {/* Real Count Categories Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '14px' }}>
+            {filteredCategories.map((cat) => {
+              const count = categoryCounts[cat.name.toLowerCase()] || 0
+              const countText = count === 1 ? '1 book' : `${count} books`
+
+              return (
+                <div
+                  key={cat.name}
+                  onClick={() => window.location.href = `/?category=${encodeURIComponent(cat.name)}`}
+                  style={{
+                    background: '#091024',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    borderRadius: '14px',
+                    padding: '14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#2563eb')}
+                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)')}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                    <span style={{ fontSize: '20px' }}>{cat.icon}</span>
+                    <div style={{ minWidth: 0 }}>
+                      <b style={{ fontSize: '13px', display: 'block', color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cat.name}</b>
+                      <span style={{ fontSize: '11px', color: count > 0 ? '#38bdf8' : '#64748b', fontWeight: count > 0 ? 'bold' : 'normal' }}>
+                        {countText}
+                      </span>
+                    </div>
                   </div>
+                  <span style={{ color: '#475569', fontSize: '12px', marginLeft: '6px' }}>›</span>
                 </div>
-                <span style={{ color: '#475569', fontSize: '12px', marginLeft: '6px' }}>›</span>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       </main>
     </div>
   )
-}
+   }
+    
