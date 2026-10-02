@@ -73,7 +73,7 @@ export default function HomePage() {
       const l = localStorage.getItem(`rd_likes_${uid}`)
       if (l) setLikedIds(JSON.parse(l))
     } catch {}
-   }
+  }
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.location.search.includes('auth=required')) {
@@ -242,17 +242,26 @@ export default function HomePage() {
     localStorage.setItem(`rd_likes_${user.id}`, JSON.stringify(next))
   }
 
-  const executeFileDownload = (book: any) => {
+  // Force actual direct file download without opening raw code in browser
+  const executeFileDownload = async (book: any) => {
     const raw = book.file_path || book.file_url || 'https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/ebooks/1790700034105-biegrb.html'
     const full = raw.startsWith('http') ? raw : `https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/ebooks/${raw}`
-    const a = document.createElement('a')
-    a.href = full
-    a.download = `${book.title || 'ebook'}.html`
-    a.target = '_blank'
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-  }
+    
+    try {
+      const response = await fetch(full)
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${(book.title || 'ebook').replace(/[^a-zA-Z0-9_-]/g, '_')}.html`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch {
+      window.open(full, '_blank')
+    }
+    }
 
   const handleDownload = (book: any) => {
     if (!user) {
@@ -296,7 +305,7 @@ export default function HomePage() {
         }
       }
     }
-        }
+  }
 
   const handleRead = async (book: any) => {
     if (!user) {
@@ -646,4 +655,4 @@ export default function HomePage() {
       )}
     </div>
   )
-            }
+                       }
