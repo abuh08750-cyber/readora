@@ -14,14 +14,14 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
 const categoriesData = [
   { name: 'Fiction', icon: '📕', group: 'Fiction' },
   { name: 'Non-Fiction', icon: '📖', group: 'Non-Fiction' },
-  { name: 'Romance', icon: '❤️', group: 'Fiction' },
+  { name: 'Romance', icon: '❤️️', group: 'Fiction' },
   { name: 'Mystery', icon: '🔍', group: 'Fiction' },
   { name: 'Thriller', icon: '🕵️', group: 'Fiction' },
   { name: 'Crime', icon: '🚧', group: 'Fiction' },
   { name: 'Horror', icon: '💀', group: 'Fiction' },
   { name: 'Fantasy', icon: '🐉', group: 'Fiction' },
   { name: 'Science Fiction', icon: '🪐', group: 'Science & Tech' },
-  { name: 'Adventure', icon: '🏔️️', group: 'Fiction' },
+  { name: 'Adventure', icon: '🏔', group: 'Fiction' },
   { name: 'Historical Fiction', icon: '🏰', group: 'Fiction' },
   { name: 'Historical', icon: '🏛️', group: 'Non-Fiction' },
   { name: 'Biography', icon: '👤', group: 'Non-Fiction' },
@@ -76,26 +76,37 @@ const categoriesData = [
 
 export default function CategoriesPage() {
   const [user, setUser] = useState<any>(null)
+  const [authChecking, setAuthChecking] = useState(true)
   const [search, setSearch] = useState('')
   const [selectedGroup, setSelectedGroup] = useState('All')
   const [headerAvatar, setHeaderAvatar] = useState<string | null>(null)
-  
-  // Real database counts per category
   const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({})
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
+      if (!session?.user) {
+        window.location.replace('/?auth=required&redirect=/categories')
+        return
+      }
+      setUser(session.user)
+      const stored = localStorage.getItem(`readora_profile_avatar_${session.user.id}`)
+      setHeaderAvatar(stored || session.user.user_metadata?.avatar_url || null)
+      setAuthChecking(false)
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session?.user) {
+        window.location.replace('/?auth=required&redirect=/categories')
+      } else {
         setUser(session.user)
-        const stored = localStorage.getItem(`readora_profile_avatar_${session.user.id}`)
-        setHeaderAvatar(stored || session.user.user_metadata?.avatar_url || null)
+        setAuthChecking(false)
       }
     })
 
     fetchLiveCategoryCounts()
+    return () => subscription.unsubscribe()
   }, [])
 
-  // Supabase se books fetch karke exact real count calculate karna
   async function fetchLiveCategoryCounts() {
     try {
       const { data, error } = await supabase.from('books').select('category')
@@ -110,6 +121,14 @@ export default function CategoriesPage() {
         setCategoryCounts(counts)
       }
     } catch {}
+  }
+
+  if (authChecking) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#050a15', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontFamily: 'system-ui, sans-serif' }}>
+        Verifying account access...
+      </div>
+    )
   }
 
   const groups = ['All', 'Fiction', 'Non-Fiction', 'Science & Tech', 'Business', 'Health & Wellness']
@@ -257,5 +276,5 @@ export default function CategoriesPage() {
       </main>
     </div>
   )
-   }
-    
+    }
+          
