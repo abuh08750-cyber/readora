@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import NotificationDropdown from '@/components/NotificationDropdown'
+import AuthModal from '@/components/AuthModal'
 
 const SUPABASE_URL = 'https://stuabcdisgmmxprapfai.supabase.co'
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0dWFiY2Rpc2dtbXhwcmFwZmFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1Njc1NjksImV4cCI6MjEwNjE0MzU2OX0.pGvaQQBWGcbDKgDb_9F1jkUURVXH3bhJ-trQt-GXBZ8'
@@ -19,10 +20,6 @@ export default function HomePage() {
   const [readingFile, setReadingFile] = useState<string | null>(null)
   const [readingTitle, setReadingTitle] = useState('')
   const [htmlData, setHtmlData] = useState<string | null>(null)
-  const [isSignUp, setIsSignUp] = useState(false)
-  const [showEmailForm, setShowEmailForm] = useState(false)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [authError, setAuthError] = useState('')
   const [loading, setLoading] = useState(true)
   const [headerAvatar, setHeaderAvatar] = useState<string | null>(null)
@@ -108,7 +105,6 @@ export default function HomePage() {
     } catch {}
   }
 
-  // Library Navigation Check
   const handleLibraryClick = () => {
     if (user) {
       window.location.href = '/library'
@@ -119,7 +115,6 @@ export default function HomePage() {
     }
   }
 
-  // Category Navigation Check (Login required)
   const handleCategoryClick = () => {
     if (user) {
       window.location.href = '/categories'
@@ -139,7 +134,7 @@ export default function HomePage() {
     setUserLibIds(next)
     localStorage.setItem(`readora_user_library_${user.id}`, JSON.stringify(next))
     alert('Book aapki Library mein add kar di gayi hai!')
-}
+  }
 
   const handleToggleSave = (bookId: string) => {
     if (!user) {
@@ -150,6 +145,16 @@ export default function HomePage() {
     setSavedIds(next)
     localStorage.setItem(`rd_saves_${user.id}`, JSON.stringify(next))
   }
+
+  const handleToggleLike = (bookId: string) => {
+    if (!user) {
+      setShowAuthModal(true)
+      return
+    }
+    const next = likedIds.includes(bookId) ? likedIds.filter((id) => id !== bookId) : [...likedIds, bookId]
+    setLikedIds(next)
+    localStorage.setItem(`rd_likes_${user.id}`, JSON.stringify(next))
+                                                     }
 
   const handleToggleLike = (bookId: string) => {
     if (!user) {
@@ -218,15 +223,14 @@ export default function HomePage() {
     if (error) setAuthError(error.message)
   }
 
-  const handleEmailAuth = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleEmailAuth = async (e: React.FormEvent, emailVal: string, passVal: string, isSignUp: boolean) => {
     setAuthError('')
     if (isSignUp) {
-      const { error } = await supabase.auth.signUp({ email, password })
+      const { error } = await supabase.auth.signUp({ email: emailVal, password: passVal })
       if (error) setAuthError(error.message)
-      else setAuthError('Confirmation email bhej diya gaya hai!')
+      else setAuthError('Confirmation email sent! Please check your inbox.')
     } else {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+      const { data, error } = await supabase.auth.signInWithPassword({ email: emailVal, password: passVal })
       if (error) {
         setAuthError(error.message)
       } else if (data?.user) {
@@ -348,7 +352,7 @@ export default function HomePage() {
 
                   <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
                     <button onClick={() => handleToggleLike(book.id)} style={{ flex: 1, background: isLiked ? 'rgba(239,68,68,0.2)' : '#070b14', color: isLiked ? '#ef4444' : '#94a3b8', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '6px 0', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>{isLiked ? '❤️ Liked' : '🤍 Like'}</button>
-                    <button onClick={() => handleToggleSave(book.id)} style={{ flex: 1, background: isSaved ? 'rgba(56,189,248,0.2)' : '#070b14', color: isSaved ? '#38bdf8' : '#94a3b8', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '6px 0', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>{isSaved ? '🔖 Saved' : 'Save'}喜</button>
+                    <button onClick={() => handleToggleSave(book.id)} style={{ flex: 1, background: isSaved ? 'rgba(56,189,248,0.2)' : '#070b14', color: isSaved ? '#38bdf8' : '#94a3b8', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '6px 0', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>{isSaved ? '🔖 Saved' : 'Save'}</button>
                     <button onClick={() => executeFileDownload(book)} style={{ flex: 1.2, background: '#070b14', color: '#38bdf8', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '6px 0', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>📥 Download</button>
                   </div>
 
@@ -361,34 +365,17 @@ export default function HomePage() {
         )}
       </section>
 
-      {/* Auth Modal */}
-      {showAuthModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-          <div style={{ background: '#ffffff', borderRadius: '24px', padding: '30px 24px', width: '100%', maxWidth: '350px', textAlign: 'center', position: 'relative', color: '#0f172a' }}>
-            <button onClick={() => { setShowAuthModal(false); setPendingRedirect(null); }} style={{ position: 'absolute', top: '14px', right: '16px', background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}>✕</button>
-            <div style={{ fontSize: '22px', marginBottom: '6px' }}>📖 Readora</div>
-            <h3 style={{ fontSize: '18px', fontWeight: '700', margin: '0 0 4px' }}>{isSignUp ? 'Create an Account' : 'Welcome Back!'}</h3>
-            <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 18px' }}>Sign in to access categories, books, and your library.</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <button onClick={() => handleOAuth('google')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#fff', color: '#0f172a', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>Continue with Google</button>
-              <button onClick={() => handleOAuth('facebook')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px', borderRadius: '10px', border: 'none', background: '#1877F2', color: '#fff', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>Continue with Facebook</button>
-              <button onClick={() => setShowEmailForm(!showEmailForm)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#fff', color: '#0f172a', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>Continue with Email</button>
-            </div>
-            {showEmailForm && (
-              <form onSubmit={handleEmailAuth} style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <input type="email" placeholder="Enter email" value={email} onChange={(e) => setEmail(e.target.value)} required style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px', outline: 'none' }} />
-                <input type="password" placeholder="Enter password" value={password} onChange={(e) => setPassword(e.target.value)} required style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px', outline: 'none' }} />
-                <button type="submit" style={{ padding: '9px', borderRadius: '8px', border: 'none', background: '#0f172a', color: '#fff', fontWeight: '600', cursor: 'pointer', fontSize: '12px' }}>{isSignUp ? 'Sign Up' : 'Sign In'}</button>
-              </form>
-            )}
-            {authError && <p style={{ fontSize: '11px', color: '#ef4444', marginTop: '8px' }}>{authError}</p>}
-            <p style={{ fontSize: '12px', color: '#64748b', margin: '18px 0 0' }}>
-              {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
-              <span onClick={() => { setIsSignUp(!isSignUp); setShowEmailForm(true); }} style={{ color: '#2563eb', fontWeight: '600', cursor: 'pointer' }}>{isSignUp ? 'Sign In' : 'Sign Up'}</span>
-            </p>
-          </div>
-        </div>
-      )}
+      {/* Modern Dark Split Auth Modal */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => {
+          setShowAuthModal(false)
+          setPendingRedirect(null)
+        }}
+        onOAuth={handleOAuth}
+        onEmailAuth={handleEmailAuth}
+        authError={authError}
+      />
     </div>
   )
-          }
+      }
