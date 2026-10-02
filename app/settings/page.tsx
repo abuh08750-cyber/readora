@@ -62,132 +62,33 @@ export default function SettingsPage() {
   const [savedSuccess, setSavedSuccess] = useState(false)
   const [headerAvatar, setHeaderAvatar] = useState<string | null>(null)
 
-  // Subview State: 'settings' | 'terms' | 'privacy'
   const [currentView, setCurrentView] = useState<'settings' | 'terms' | 'privacy'>('settings')
 
-  // Theme Settings
   const [activeTheme, setActiveTheme] = useState<'Dark' | 'Light' | 'Sepia' | 'Custom'>('Dark')
   const [customHex, setCustomHex] = useState('#6366f1')
 
-  // Reading Preferences
   const [readingMode, setReadingMode] = useState('Dark Mode')
   const [fontSize, setFontSize] = useState('Medium')
   const [lineSpacing, setLineSpacing] = useState('Normal')
 
-  // Validation
   const [nameError, setNameError] = useState('')
   const [usernameError, setUsernameError] = useState('')
 
-  // Notifications Toggles
   const [notifReleases, setNotifReleases] = useState(true)
   const [notifReminders, setNotifReminders] = useState(false)
   const [notifReplies, setNotifReplies] = useState(true)
   const [notifMarketing, setNotifMarketing] = useState(false)
 
-  // Library Settings Toggles
   const [syncProgress, setSyncProgress] = useState(true)
   const [autoSavePos, setAutoSavePos] = useState(true)
 
-  // Modals
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false)
   const [isRecoveryFlow, setIsRecoveryFlow] = useState(false)
-
-  // Live Weather condition detection for Header Icon
-  useEffect(() => {
-    async function detectLiveWeatherIcon(lat: number, lon: number) {
-      try {
-        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`)
-        if (!res.ok) return
-        const data = await res.json()
-        const weatherCode = data.current_weather?.weathercode ?? 0
-        const isDay = data.current_weather?.is_day ?? 1
-
-        // WMO Weather Codes interpretation
-        if (weatherCode >= 51 && weatherCode <= 82) {
-          setWeatherIcon('🌧️') // Rain / Showers
-        } else if (weatherCode >= 95) {
-          setWeatherIcon('🌨️') // Storm / Heavy precipitation
-        } else if (weatherCode >= 1 && weatherCode <= 3) {
-          setWeatherIcon('☁️') // Cloud / Overcast
-        } else {
-          // Clear sky
-          setWeatherIcon(isDay === 1 ? '☀️' : '🌙')
-        }
-      } catch {
-        const hour = new Date().getHours()
-        setWeatherIcon(hour >= 18 || hour < 6 ? '🌙' : '☀️')
-      }
-    }
-
-    if (typeof window !== 'undefined' && 'geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => detectLiveWeatherIcon(pos.coords.latitude, pos.coords.longitude),
-        () => detectLiveWeatherIcon(11.2588, 75.7804), // Default Kozhikode coordinates
-        { timeout: 6000 }
-      )
-    } else {
-      const hour = new Date().getHours()
-      setWeatherIcon(hour >= 18 || hour < 6 ? '🌙' : '☀️')
-    }
-  }, [])
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const hash = window.location.hash
-      if (hash && (hash.includes('type=recovery') || hash.includes('access_token='))) {
-        setIsRecoveryFlow(true)
-        setIsPasswordModalOpen(true)
-      }
-    }
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      const isRecovery = typeof window !== 'undefined' && window.location.hash.includes('type=recovery')
-      if (!session?.user && !isRecovery) {
-        window.location.replace('/')
-        return
-      }
-      if (session?.user) {
-        setUser(session.user)
-        setupUserProfile(session.user)
-      }
-      setAuthChecking(false)
-    })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setIsRecoveryFlow(true)
-        setIsPasswordModalOpen(true)
-        if (session?.user) setUser(session.user)
-      } else if (event === 'SIGNED_OUT' || !session?.user) {
-        const isRecovery = typeof window !== 'undefined' && window.location.hash.includes('type=recovery')
-        if (!isRecovery) {
-          window.location.replace('/')
-        }
-      } else if (session?.user) {
-        setUser(session.user)
-        setupUserProfile(session.user)
-      }
-    })
-
-    try {
-      const savedT = localStorage.getItem('readora_app_theme') as any
-      if (savedT) setActiveTheme(savedT)
-      const savedC = localStorage.getItem('readora_custom_color')
-      if (savedC) setCustomHex(savedC)
-
-      const savedPrefs = localStorage.getItem('readora_reading_prefs')
-      if (savedPrefs) {
-        const parsed = JSON.parse(savedPrefs)
-        if (parsed.readingMode) setReadingMode(parsed.readingMode)
-        if (parsed.fontSize) setFontSize(parsed.fontSize)
-        if (parsed.lineSpacing) setLineSpacing(parsed.lineSpacing)
-}
   const [isHelpCenterOpen, setIsHelpCenterOpen] = useState(false)
   const [isWeatherModalOpen, setIsWeatherModalOpen] = useState(false)
   const [activeModal, setActiveModal] = useState<'none' | '2fa' | 'activity'>('none')
   const [is2FAEnabled, setIs2FAEnabled] = useState(false)
 
-  // Dynamic Weather Icon based on live conditions
   const [weatherIcon, setWeatherIcon] = useState('☀️')
 
   const setupUserProfile = (currentUser: any) => {
@@ -215,12 +116,10 @@ export default function SettingsPage() {
     const storedAvatar = localStorage.getItem(`readora_profile_avatar_${userId}`)
     setHeaderAvatar(storedAvatar || socialAvatar || null)
 
-    // Load 2FA status for this specific user
     const stored2FA = localStorage.getItem(`readora_2fa_enabled_${userId}`)
     setIs2FAEnabled(stored2FA === 'true')
 }
 
-  // Live Weather condition detection for Header Icon
   useEffect(() => {
     async function detectLiveWeatherIcon(lat: number, lon: number) {
       try {
@@ -230,15 +129,13 @@ export default function SettingsPage() {
         const weatherCode = data.current_weather?.weathercode ?? 0
         const isDay = data.current_weather?.is_day ?? 1
 
-        // WMO Weather Codes interpretation
         if (weatherCode >= 51 && weatherCode <= 82) {
-          setWeatherIcon('🌧️') // Rain / Showers
+          setWeatherIcon('🌧️')
         } else if (weatherCode >= 95) {
-          setWeatherIcon('🌨️') // Storm / Heavy precipitation
+          setWeatherIcon('🌨️')
         } else if (weatherCode >= 1 && weatherCode <= 3) {
-          setWeatherIcon('☁️') // Cloud / Overcast
+          setWeatherIcon('☁️')
         } else {
-          // Clear sky
           setWeatherIcon(isDay === 1 ? '☀️' : '🌙')
         }
       } catch {
@@ -250,7 +147,7 @@ export default function SettingsPage() {
     if (typeof window !== 'undefined' && 'geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => detectLiveWeatherIcon(pos.coords.latitude, pos.coords.longitude),
-        () => detectLiveWeatherIcon(11.2588, 75.7804), // Default Kozhikode coordinates
+        () => detectLiveWeatherIcon(11.2588, 75.7804),
         { timeout: 6000 }
       )
     } else {
@@ -309,7 +206,7 @@ export default function SettingsPage() {
         if (parsed.readingMode) setReadingMode(parsed.readingMode)
         if (parsed.fontSize) setFontSize(parsed.fontSize)
         if (parsed.lineSpacing) setLineSpacing(parsed.lineSpacing)
-                    }
+      }
 
       const savedNotifs = localStorage.getItem('readora_notif_settings')
       if (savedNotifs) {
@@ -367,7 +264,7 @@ export default function SettingsPage() {
         marketing: nextMarketing,
       }))
     } catch (e) {}
-  }
+        }
 
   const toggleLibrarySetting = (key: 'sync' | 'autoSave') => {
     let nextSync = syncProgress
@@ -387,7 +284,7 @@ export default function SettingsPage() {
         autoSavePos: nextAutoSave,
       }))
     } catch (e) {}
-        }
+  }
 
   const styles = (() => {
     if (activeTheme === 'Light') {
@@ -427,7 +324,7 @@ export default function SettingsPage() {
         card: `rgba(${Math.floor(r * 0.15 + 10)}, ${Math.floor(g * 0.15 + 14)}, ${Math.floor(b * 0.15 + 24)}, 0.85)`,
         inner: `rgba(${Math.floor(r * 0.08)}, ${Math.floor(g * 0.08)}, ${Math.floor(b * 0.08)}, 0.9)`,
         text: '#f8fafc',
-        muted: `rgba(${Math.min(r + 60, 240)}, ${Math.min(g + 60, 240)}, ${Math.min(g + 60, 240)}, 0.85)`,
+        muted: `rgba(${Math.min(r + 60, 240)}, ${Math.min(g + 60, 240)}, ${Math.min(b + 60, 240)}, 0.85)`,
         border: `rgba(${r}, ${g}, ${b}, 0.35)`,
         nav: customHex,
         accent: customHex,
@@ -556,7 +453,7 @@ export default function SettingsPage() {
         Verifying session...
       </div>
     )
-        }
+  }
 
   const avatarChar = fullName ? fullName.charAt(0).toUpperCase() : (emailVal ? emailVal.charAt(0).toUpperCase() : 'R')
 
@@ -569,7 +466,6 @@ export default function SettingsPage() {
       fontFamily: 'system-ui, -apple-system, sans-serif',
       transition: 'all 0.25s ease'
     }}>
-      
       {/* Sidebar */}
       <aside style={{
         width: '220px',
@@ -611,7 +507,6 @@ export default function SettingsPage() {
 
       {/* Main Panel */}
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflowY: 'auto' }}>
-        
         {/* Top Header */}
         <header style={{
           padding: '14px 24px',
@@ -644,7 +539,6 @@ export default function SettingsPage() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            {/* Dynamic Weather Icon that opens Weather Modal */}
             <span
               onClick={() => setIsWeatherModalOpen(true)}
               style={{
@@ -684,7 +578,6 @@ export default function SettingsPage() {
 
         {/* Content Body: Terms | Privacy | Settings */}
         <div style={{ padding: '24px 28px 60px', maxWidth: '1280px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
-          
           {currentView === 'terms' ? (
             <TermsConditionsView
               onBack={() => setCurrentView('settings')}
@@ -730,7 +623,6 @@ export default function SettingsPage() {
 
               {/* Cards Grid */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '18px' }}>
-                
                 {/* Card 1: Account Settings */}
                 <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '16px', padding: '20px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
@@ -1057,7 +949,6 @@ export default function SettingsPage() {
                   <p style={{ color: styles.muted, fontSize: '11px', margin: '0 0 16px' }}>Get help and contact our team.</p>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {/* 1. Help Center Modal */}
                     <div onClick={() => setIsHelpCenterOpen(true)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                       <div>
                         <b style={{ fontSize: '12px', display: 'block' }}>Help Center</b>
@@ -1066,7 +957,6 @@ export default function SettingsPage() {
                       <span style={{ color: styles.accent, fontWeight: 'bold' }}>›</span>
                     </div>
 
-                    {/* 2. Contact Us */}
                     <div onClick={() => window.open('mailto:readora.support@gmail.com')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                       <div>
                         <b style={{ fontSize: '12px', display: 'block' }}>Contact Us</b>
@@ -1075,7 +965,6 @@ export default function SettingsPage() {
                       <span style={{ color: styles.muted }}>›</span>
                     </div>
 
-                    {/* 3. Terms & Conditions -> OPENS FULL PAGE COMPONENT */}
                     <div
                       onClick={() => setCurrentView('terms')}
                       style={{
@@ -1096,7 +985,6 @@ export default function SettingsPage() {
                       <span style={{ color: styles.accent, fontWeight: 'bold' }}>View ›</span>
                     </div>
 
-                    {/* 4. Privacy Policy -> OPENS FULL PAGE COMPONENT */}
                     <div
                       onClick={() => setCurrentView('privacy')}
                       style={{
@@ -1118,13 +1006,10 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 </div>
-
               </div>
             </>
           )}
-
         </div>
-
       </main>
 
       {/* Change Password Modal */}
@@ -1210,7 +1095,6 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
-
-        </div>
+    </div>
   )
-    }
+          }
