@@ -228,4 +228,4 @@ export default function CategoriesPage() {
       </main>
     </div>
   )
-              }
+}
