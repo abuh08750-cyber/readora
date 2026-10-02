@@ -30,8 +30,11 @@ export default function LibraryPage() {
   const [authChecking, setAuthChecking] = useState(true)
   const [cat, setCat] = useState('All Books')
   const [tab, setTab] = useState<'all' | 'mybooks' | 'recent' | 'favorites'>('all')
-  const [likes, setLikes] = useState<string[]>([])
-  const [saves, setSaves] = useState<string[]>([])
+
+  // User Shelves
+  const [userLibIds, setUserLibIds] = useState<string[]>([])
+  const [savedIds, setSavedIds] = useState<string[]>([])
+  const [likedIds, setLikedIds] = useState<string[]>([])
   const [recent, setRecent] = useState<string[]>([])
 
   // Global Theme
@@ -39,18 +42,23 @@ export default function LibraryPage() {
   const [customColor, setCustomColor] = useState('#6366f1')
   const [headerAvatar, setHeaderAvatar] = useState<string | null>(null)
 
-  // Views & Reviews
-  const [viewsMap, setViewsMap] = useState<Record<string, number>>({})
-  const [reviewsMap, setReviewsMap] = useState<Record<string, any[]>>({})
-  const [activeReviewBook, setActiveReviewBook] = useState<any>(null)
-  const [inputRating, setInputRating] = useState(5)
-  const [inputComment, setInputComment] = useState('')
-
   const [reader, setReader] = useState<{ url: string; title: string; html: string } | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const loadUserData = (uid: string) => {
+    try {
+      const lib = localStorage.getItem(`readora_user_library_${uid}`)
+      if (lib) setUserLibIds(JSON.parse(lib))
+      const s = localStorage.getItem(`rd_saves_${uid}`)
+      if (s) setSavedIds(JSON.parse(s))
+      const l = localStorage.getItem(`rd_likes_${uid}`)
+      if (l) setLikedIds(JSON.parse(l))
+      const r = localStorage.getItem(`rd_recent_${uid}`)
+      if (r) setRecent(JSON.parse(r))
+    } catch {}
+  }
+
   useEffect(() => {
-    // Auth Verification
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session?.user) {
         window.location.replace('/?auth=required')
@@ -60,6 +68,7 @@ export default function LibraryPage() {
       const meta = session.user.user_metadata || {}
       const storedAvatar = localStorage.getItem(`readora_profile_avatar_${session.user.id}`)
       setHeaderAvatar(storedAvatar || meta.avatar_url || meta.picture || null)
+      loadUserData(session.user.id)
       setAuthChecking(false)
     })
 
@@ -71,22 +80,12 @@ export default function LibraryPage() {
         const meta = session.user.user_metadata || {}
         const storedAvatar = localStorage.getItem(`readora_profile_avatar_${session.user.id}`)
         setHeaderAvatar(storedAvatar || meta.avatar_url || meta.picture || null)
+        loadUserData(session.user.id)
         setAuthChecking(false)
       }
     })
 
     try {
-      const l = localStorage.getItem('rd_likes')
-      if (l) setLikes(JSON.parse(l))
-      const s = localStorage.getItem('rd_saves')
-      if (s) setSaves(JSON.parse(s))
-      const r = localStorage.getItem('rd_recent')
-      if (r) setRecent(JSON.parse(r))
-      const v = localStorage.getItem('rd_views')
-      if (v) setViewsMap(JSON.parse(v))
-      const rev = localStorage.getItem('rd_reviews')
-      if (rev) setReviewsMap(JSON.parse(rev))
-
       const savedTheme = localStorage.getItem('readora_app_theme') as any
       if (savedTheme) setThemeMode(savedTheme)
       const savedColor = localStorage.getItem('readora_custom_color')
@@ -99,11 +98,10 @@ export default function LibraryPage() {
         setBooks(data)
       } else {
         setBooks([{
-          id: 'dfb9528e-8466-4c5f-aeab-0329ae420bf1',
+          id: 'default-1',
           title: 'ZERO SE ARTIST part 1',
           author: 'TIGER SOUL',
           category: 'Music',
-          description: 'Artist banne ki shuruat - apni pehchan banao, apna sound dhoondo, apna safar shuru karo.',
           cover_path: 'https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/covers/1790700033242-teliy6.jpg',
           file_path: 'https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/ebooks/1790700034105-biegrb.html',
         }])
@@ -114,22 +112,6 @@ export default function LibraryPage() {
     load()
     return () => subscription.unsubscribe()
   }, [])
-
-  if (authChecking) {
-    return (
-      <div style={{
-        minHeight: '100vh',
-        background: '#070b14',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: '#94a3b8',
-        fontFamily: 'system-ui, -apple-system, sans-serif'
-      }}>
-        Verifying account access...
-      </div>
-    )
-           }
 
   const styles = (() => {
     if (themeMode === 'Light') {
@@ -189,27 +171,12 @@ export default function LibraryPage() {
     }
   })()
 
-  const toggleLike = (id: string) => {
-    const next = likes.includes(id) ? likes.filter(x => x !== id) : [...likes, id]
-    setLikes(next)
-    try { localStorage.setItem('rd_likes', JSON.stringify(next)) } catch {}
-  }
-
-  const toggleSave = (id: string) => {
-    const next = saves.includes(id) ? saves.filter(x => x !== id) : [...saves, id]
-    setSaves(next)
-    try { localStorage.setItem('rd_saves', JSON.stringify(next)) } catch {}
-  }
-
   const openBook = async (b: any) => {
-    const currentViews = (viewsMap[b.id] || 0) + 1
-    const nextViews = { ...viewsMap, [b.id]: currentViews }
-    setViewsMap(nextViews)
-    try { localStorage.setItem('rd_views', JSON.stringify(nextViews)) } catch {}
-
-    const updatedRecent = [b.id, ...recent.filter(id => id !== b.id)]
-    setRecent(updatedRecent)
-    try { localStorage.setItem('rd_recent', JSON.stringify(updatedRecent)) } catch {}
+    if (user?.id) {
+      const updatedRecent = [b.id, ...recent.filter(id => id !== b.id)]
+      setRecent(updatedRecent)
+      try { localStorage.setItem(`rd_recent_${user.id}`, JSON.stringify(updatedRecent)) } catch {}
+    }
 
     const raw = b.file_path || b.file_url || 'https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/ebooks/1790700034105-biegrb.html'
     const full = raw.startsWith('http') ? raw : `https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/ebooks/${raw}`
@@ -222,46 +189,31 @@ export default function LibraryPage() {
     } else { window.open(full, '_blank') }
   }
 
-  const handleAddReview = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!activeReviewBook) return
-    const bookId = activeReviewBook.id
-    const newEntry = {
-      id: Date.now().toString(),
-      user: user?.user_metadata?.full_name || (user?.email ? user.email.split('@')[0] : 'Guest Reader'),
-      rating: inputRating,
-      comment: inputComment || 'Bahut badhiya kitaab!',
-      date: new Date().toLocaleDateString(),
-    }
-    const currentList = reviewsMap[bookId] || []
-    const updated = [newEntry, ...currentList]
-    const nextReviews = { ...reviewsMap, [bookId]: updated }
-    setReviewsMap(nextReviews)
-    try { localStorage.setItem('rd_reviews', JSON.stringify(nextReviews)) } catch {}
-    setInputComment('')
-        }
-
-  const getBookRatingStats = (bookId: string) => {
-    const list = reviewsMap[bookId] || []
-    if (list.length === 0) return { avg: 5.0, count: 0 }
-    const sum = list.reduce((acc, curr) => acc + curr.rating, 0)
-    return { avg: (sum / list.length).toFixed(1), count: list.length }
-  }
-
+  // Filter books: Tab selection + Explicit Added to Library status
   const filtered = books.filter(b => {
+    const isAdded = userLibIds.includes(b.id)
     const matchCat = cat === 'All Books' || b.category?.toLowerCase() === cat.toLowerCase()
     const matchTab = tab === 'all' 
-      || (tab === 'mybooks' && saves.includes(b.id)) 
-      || (tab === 'favorites' && likes.includes(b.id))
-      || (tab === 'recent' && recent.includes(b.id))
+      ? isAdded
+      : tab === 'mybooks' 
+        ? savedIds.includes(b.id)
+        : tab === 'favorites' 
+          ? likedIds.includes(b.id)
+          : recent.includes(b.id)
     return matchCat && matchTab
   })
 
-  // Dynamic Avatar Initial
   const avatarChar = user?.user_metadata?.full_name?.charAt(0)?.toUpperCase() ||
     user?.user_metadata?.name?.charAt(0)?.toUpperCase() ||
-    user?.email?.charAt(0)?.toUpperCase() ||
-    'R'
+    user?.email?.charAt(0)?.toUpperCase() || 'R'
+
+  if (authChecking) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#070b14', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontFamily: 'system-ui, sans-serif' }}>
+        Verifying account access...
+      </div>
+    )
+  }
 
   if (reader) {
     return (
@@ -287,25 +239,25 @@ export default function LibraryPage() {
       
       {/* Sidebar Navigation */}
       <aside style={{
-        width: '200px',
+        width: '210px',
         background: styles.sidebar,
         borderRight: `1px solid ${styles.border}`,
-        padding: '20px 12px',
+        padding: '20px 14px',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
         flexShrink: 0
       }}>
         <div>
-          <div onClick={() => window.location.href = '/'} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '18px', fontWeight: '800', marginBottom: '24px', cursor: 'pointer' }}>
+          <div onClick={() => window.location.href = '/'} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '18px', fontWeight: '800', marginBottom: '24px', cursor: 'pointer' }}>
             <span>📖</span><span>Readora</span>
           </div>
-          <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
+          <nav style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px' }}>
             <div onClick={() => window.location.href = '/'} style={{ padding: '8px 10px', borderRadius: '6px', cursor: 'pointer', color: styles.muted }}>🏠 Home</div>
-            <div onClick={() => { setTab('all'); setCat('All Books'); }} style={{ padding: '8px 10px', borderRadius: '6px', cursor: 'pointer', color: '#fff', background: styles.nav, fontWeight: 'bold' }}>📖 Library</div>
-            <div onClick={() => setTab('mybooks')} style={{ padding: '8px 10px', borderRadius: '6px', cursor: 'pointer', color: tab === 'mybooks' ? '#fff' : styles.muted, background: tab === 'mybooks' ? styles.nav : 'transparent' }}>📑 My Books ({saves.length})</div>
+            <div onClick={() => { setTab('all'); setCat('All Books'); }} style={{ padding: '8px 10px', borderRadius: '6px', cursor: 'pointer', color: '#fff', background: tab === 'all' ? styles.nav : 'transparent', fontWeight: 'bold' }}>📖 Library ({userLibIds.length})</div>
+            <div onClick={() => setTab('mybooks')} style={{ padding: '8px 10px', borderRadius: '6px', cursor: 'pointer', color: tab === 'mybooks' ? '#fff' : styles.muted, background: tab === 'mybooks' ? styles.nav : 'transparent' }}>📑 My Books ({savedIds.length})</div>
             <div onClick={() => setTab('recent')} style={{ padding: '8px 10px', borderRadius: '6px', cursor: 'pointer', color: tab === 'recent' ? '#fff' : styles.muted, background: tab === 'recent' ? styles.nav : 'transparent' }}>🕒 Recently Read ({recent.length})</div>
-            <div onClick={() => setTab('favorites')} style={{ padding: '8px 10px', borderRadius: '6px', cursor: 'pointer', color: tab === 'favorites' ? '#fff' : styles.muted, background: tab === 'favorites' ? styles.nav : 'transparent' }}>❤️ Liked ({likes.length})</div>
+            <div onClick={() => setTab('favorites')} style={{ padding: '8px 10px', borderRadius: '6px', cursor: 'pointer', color: tab === 'favorites' ? '#fff' : styles.muted, background: tab === 'favorites' ? styles.nav : 'transparent' }}>❤️ Liked ({likedIds.length})</div>
             <div onClick={() => window.location.href = '/settings'} style={{ padding: '8px 10px', borderRadius: '6px', cursor: 'pointer', color: styles.muted }}>⚙️ Settings</div>
           </nav>
         </div>
@@ -329,7 +281,7 @@ export default function LibraryPage() {
           zIndex: 30
         }}>
           <span style={{ fontSize: '13px', color: styles.muted }}>
-            {tab === 'all' ? 'Book Collection' : tab === 'mybooks' ? 'My Saved Shelf' : tab === 'recent' ? 'Recently Read' : 'Liked Books'}
+            {tab === 'all' ? 'Your Personal Library Shelf' : tab === 'mybooks' ? 'My Saved Shelf' : tab === 'recent' ? 'Recently Read' : 'Liked Books'}
           </span>
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
@@ -403,14 +355,20 @@ export default function LibraryPage() {
           {/* Books Grid */}
           {loading ? (
             <p style={{ color: styles.muted, fontSize: '12px' }}>Loading books...</p>
+          ) : filtered.length === 0 ? (
+            <div style={{ background: styles.card, padding: '40px 20px', textAlign: 'center', borderRadius: '16px', border: `1px solid ${styles.border}` }}>
+              <p style={{ margin: '0 0 10px', fontSize: '13px', color: styles.muted }}>Aapki library mein abhi koi book add nahi hai.</p>
+              <button
+                onClick={() => window.location.href = '/'}
+                style={{ background: styles.nav, color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                Home par jayein aur &quot;➕ Add to Library&quot; karein
+              </button>
+            </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '14px' }}>
               {filtered.map((b) => {
                 const cover = (b.cover_path || b.cover_url)?.startsWith('http') ? (b.cover_path || b.cover_url) : `https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/covers/${b.cover_path || '1790700033242-teliy6.jpg'}`
-                const isLiked = likes.includes(b.id)
-                const isSaved = saves.includes(b.id)
-                const views = viewsMap[b.id] || 0
-                const stats = getBookRatingStats(b.id)
 
                 return (
                   <div key={b.id} style={{
@@ -421,32 +379,18 @@ export default function LibraryPage() {
                     display: 'flex',
                     flexDirection: 'column'
                   }}>
-                    <div style={{ height: '200px', borderRadius: '8px', backgroundImage: `url(${cover})`, backgroundSize: 'cover', backgroundPosition: 'center', marginBottom: '8px' }} />
+                    <div style={{ height: '210px', borderRadius: '8px', backgroundImage: `url(${cover})`, backgroundSize: 'cover', backgroundPosition: 'center', marginBottom: '8px' }} />
                     
                     <h4 style={{ fontSize: '13px', margin: '0 0 2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: styles.text }}>{b.title}</h4>
-                    <p style={{ fontSize: '11px', color: styles.muted, margin: '0 0 6px' }}>{b.author || 'Readora'}</p>
+                    <p style={{ fontSize: '11px', color: styles.muted, margin: '0 0 12px' }}>{b.author || 'Readora'}</p>
 
-                    {/* Views & Badges */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', marginBottom: '8px', background: styles.inner, padding: '4px 6px', borderRadius: '6px' }}>
-                      <span style={{ color: styles.accent, fontWeight: 'bold' }}>👁️ {views} views</span>
-                      <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>⭐ {stats.avg} ({stats.count})</span>
-                    </div>
-
-                    {/* Like & Save Row */}
-                    <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
-                      <button onClick={() => toggleLike(b.id)} style={{ flex: 1, background: isLiked ? 'rgba(239,68,68,0.2)' : styles.inner, color: isLiked ? '#ef4444' : styles.muted, border: `1px solid ${styles.border}`, borderRadius: '6px', padding: '5px 0', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>
-                        {isLiked ? '❤️ Liked' : '🤍 Like'}
-                      </button>
-                      <button onClick={() => toggleSave(b.id)} style={{ flex: 1, background: isSaved ? 'rgba(56,189,248,0.2)' : styles.inner, color: isSaved ? styles.accent : styles.muted, border: `1px solid ${styles.border}`, borderRadius: '6px', padding: '5px 0', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>
-                        {isSaved ? '🔖 Saved' : '📥 Save'}
-                      </button>
-                    </div>
-
-                    {/* Actions */}
-                    <div style={{ display: 'flex', gap: '6px', marginTop: 'auto' }}>
-                      <button onClick={() => setActiveReviewBook(b)} style={{ flex: 1, background: styles.inner, color: styles.muted, border: `1px solid ${styles.border}`, borderRadius: '6px', padding: '6px 0', fontSize: '11px', cursor: 'pointer' }}>⭐ Review</button>
-                      <button onClick={() => openBook(b)} style={{ flex: 1.3, background: styles.nav, color: '#fff', border: 'none', borderRadius: '6px', padding: '6px 0', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>📖 Read</button>
-                    </div>
+                    {/* Clean Action: Only Read Book Button */}
+                    <button
+                      onClick={() => openBook(b)}
+                      style={{ marginTop: 'auto', width: '100%', background: styles.nav, color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 0', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+                    >
+                      📖 Read Book
+                    </button>
                   </div>
                 )
               })}
@@ -454,65 +398,6 @@ export default function LibraryPage() {
           )}
         </div>
       </main>
-
-      {/* Star Rating Modal */}
-      {activeReviewBook && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
-          <div style={{ background: styles.card, border: `1px solid ${styles.border}`, borderRadius: '14px', padding: '20px', maxWidth: '340px', width: '100%', maxHeight: '85vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <b style={{ color: styles.accent, fontSize: '14px' }}>Review & Ratings</b>
-              <button onClick={() => setActiveReviewBook(null)} style={{ background: 'none', border: 'none', color: styles.muted, fontSize: '16px', cursor: 'pointer' }}>✕</button>
-            </div>
-
-            <p style={{ margin: '0 0 10px', fontSize: '13px', fontWeight: 'bold', color: styles.text }}>{activeReviewBook.title}</p>
-
-            <form onSubmit={handleAddReview} style={{ marginBottom: '18px' }}>
-              <div style={{ display: 'flex', gap: '6px', marginBottom: '10px' }}>
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <span
-                    key={star}
-                    onClick={() => setInputRating(star)}
-                    style={{ fontSize: '22px', cursor: 'pointer', color: star <= inputRating ? '#fbbf24' : '#475569' }}
-                  >
-                    ★
-                  </span>
-                ))}
-                <span style={{ fontSize: '12px', color: '#fbbf24', marginLeft: '6px', alignSelf: 'center', fontWeight: 'bold' }}>{inputRating} / 5</span>
-              </div>
-
-              <input
-                type="text"
-                placeholder="Write your review..."
-                value={inputComment}
-                onChange={(e) => setInputComment(e.target.value)}
-                style={{ width: '100%', background: styles.inner, border: `1px solid ${styles.border}`, borderRadius: '8px', padding: '8px 10px', color: styles.text, fontSize: '12px', outline: 'none', boxSizing: 'border-box', marginBottom: '8px' }}
-              />
-              <button type="submit" style={{ width: '100%', background: styles.nav, color: '#fff', border: 'none', padding: '8px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px' }}>
-                Submit Review
-              </button>
-            </form>
-
-            <div style={{ borderTop: `1px solid ${styles.border}`, paddingTop: '12px' }}>
-              <h5 style={{ margin: '0 0 8px', fontSize: '12px', color: styles.muted }}>User Reviews ({(reviewsMap[activeReviewBook.id] || []).length})</h5>
-              {(reviewsMap[activeReviewBook.id] || []).length === 0 ? (
-                <p style={{ fontSize: '11px', color: styles.muted }}>Abhi tak koi review nahi aaya.</p>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {(reviewsMap[activeReviewBook.id] || []).map((rev) => (
-                    <div key={rev.id} style={{ background: styles.inner, padding: '8px', borderRadius: '6px', border: `1px solid ${styles.border}` }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '2px' }}>
-                        <b style={{ color: styles.accent }}>{rev.user}</b>
-                        <span style={{ color: '#fbbf24' }}>{'★'.repeat(rev.rating)}</span>
-                      </div>
-                      <p style={{ margin: 0, fontSize: '11px', color: styles.text }}>{rev.comment}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
-                       }
+                }
