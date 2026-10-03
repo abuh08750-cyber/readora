@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     const userId = session.user.id
     let convId = conversationId
 
-    // 1. Conversation create karein
+    // 1. New conversation create karein
     if (!convId) {
       const title = message.slice(0, 36) + (message.length > 36 ? '...' : '')
       const { data: newConv } = await supabase
@@ -46,66 +46,54 @@ export async function POST(req: Request) {
     if (!apiKey) {
       assistantReply = 'Vercel settings me GEMINI_API_KEY missing hai.'
     } else {
-      try {
-        // Step A: Google se direct supported models list fetch karein
-        const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`)
-        const listData = await listRes.json()
+      // Google dwara recommended active models
+      const modelsToTry = [
+        'gemini-3.0-flash',
+        'gemini-3.1-pro-preview',
+        'gemini-2.0-flash',
+        'gemini-2.0-flash-exp'
+      ]
 
-        if (listData.error) {
-          assistantReply = `Google Setup Error: ${listData.error.message}`
-        } else if (!listData.models || listData.models.length === 0) {
-          assistantReply = 'Aapke account me koi models activate nahi dikh rahe hain.'
-        } else {
-          // Content generate karne wale models filter karein
-          const usableModels = listData.models.filter((m: any) =>
-            m.supportedGenerationMethods?.includes('generateContent')
-          )
+      let lastError = ''
+      for (const model of modelsToTry) {
+        try {
+          const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
 
-          // Model pick karein (priority: flash -> pro -> pehla available)
-          const target =
-            usableModels.find((m: any) => m.name.includes('flash')) ||
-            usableModels.find((m: any) => m.name.includes('pro')) ||
-            usableModels[0]
+          const res = await fetch(geminiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [
+                {
+                  role: 'user',
+                  parts: [
+                    {
+                      text: `You are Readora AI, a helpful and friendly assistant for the Readora eBook platform. Provide direct, structured answers using markdown.\n\nUser Question: ${message}`,
+                    },
+                  ],
+                },
+              ],
+            }),
+          })
 
-          if (!target) {
-            const names = listData.models.map((m: any) => m.name.replace('models/', '')).join(', ')
-            assistantReply = `generateContent wala model nahi mila. Available models: ${names}`
-          } else {
-            const generateUrl = `https://generativelanguage.googleapis.com/v1beta/${target.name}:generateContent?key=${apiKey}`
-
-            const genRes = await fetch(generateUrl, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                contents: [
-                  {
-                    role: 'user',
-                    parts: [
-                      {
-                        text: `You are Readora AI, an intelligent, helpful assistant for the Readora eBook platform. Answer clearly using markdown.\n\nUser Question: ${message}`,
-                      },
-                    ],
-                  },
-                ],
-              }),
-            })
-
-            const genData = await genRes.json()
-            if (genData.candidates && genData.candidates[0]?.content?.parts?.[0]?.text) {
-              assistantReply = genData.candidates[0].content.parts[0].text
-            } else if (genData.error) {
-              assistantReply = `Gemini (${target.name}) Error: ${genData.error.message}`
-            } else {
-              assistantReply = 'Uttar generate nahi ho saka. Kripya punha prayatna karein.'
-            }
+          const data = await res.json()
+          if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+            assistantReply = data.candidates[0].content.parts[0].text
+            break // Sahi uttar milte hi loop band
+          } else if (data.error) {
+            lastError = data.error.message || 'API error'
           }
+        } catch (e: any) {
+          lastError = e.message || 'Network error'
         }
-      } catch (err: any) {
-        assistantReply = `Network/Server issue: ${err.message || 'Failed to connect'}`
+      }
+
+      if (!assistantReply) {
+        assistantReply = `Gemini Error: ${lastError || 'Response generate nahi ho saka.'}`
       }
     }
 
-    // 3. AI assistant response save karein
+    // 3. AI response database me save karein
     if (convId) {
       await supabase.from('ai_messages').insert({
         conversation_id: convId,
@@ -134,5 +122,5 @@ export async function POST(req: Request) {
       sources: [],
     })
   }
-            }
-                
+          }
+              
