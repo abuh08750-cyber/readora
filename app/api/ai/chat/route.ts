@@ -46,44 +46,50 @@ export async function POST(req: Request) {
     let assistantReply = ''
 
     if (!apiKey) {
-      assistantReply = 'Vercel madhe GEMINI_API_KEY set keli nahiye. Krupiya environment variable check kara.'
+      assistantReply = 'Vercel सेटिंग्स में GEMINI_API_KEY नहीं मिली।'
     } else {
-      try {
-        // v1 endpoint cha upyog
-        const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`
-        
-        const response = await fetch(geminiUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [
-              {
-                role: 'user',
-                parts: [
-                  {
-                    text: `You are Readora AI, a friendly, helpful, and knowledgeable library assistant for the Readora eBook platform. Provide clear, well-structured answers using markdown formatting.\n\nUser Question: ${message}`
-                  }
-                ]
-              }
-            ]
+      // अलग-अलग मान्य वर्ज़न ट्राय करने की लिस्ट
+      const candidateUrls = [
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent?key=${apiKey}`
+      ]
+
+      let lastErrorMsg = ''
+      for (const url of candidateUrls) {
+        try {
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [
+                {
+                  role: 'user',
+                  parts: [{ text: `You are Readora AI, a friendly, intelligent assistant for the Readora eBook platform. Provide helpful, well-formatted answers.\n\nUser Question: ${message}` }]
+                }
+              ]
+            })
           })
-        })
 
-        const geminiData = await response.json()
-
-        if (geminiData.candidates && geminiData.candidates[0]?.content?.parts?.[0]?.text) {
-          assistantReply = geminiData.candidates[0].content.parts[0].text
-        } else if (geminiData.error) {
-          assistantReply = `Gemini Error: ${geminiData.error.message || 'API request failed'}`
-        } else {
-          assistantReply = 'Kshama kara, uttar tayar hou shakle nahi. Krupaya punha prayatna kara.'
+          const data = await res.json()
+          if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+            assistantReply = data.candidates[0].content.parts[0].text
+            break // उत्तर मिलते ही लूप बंद
+          } else if (data.error) {
+            lastErrorMsg = data.error.message || 'API error'
+          }
+        } catch (e: any) {
+          lastErrorMsg = e.message || 'Network error'
         }
-      } catch (err: any) {
-        assistantReply = `AI service connect zali nahi: ${err.message || 'Network error'}`
+      }
+
+      if (!assistantReply) {
+        assistantReply = `Gemini Error: ${lastErrorMsg || 'मॉडल कनेक्ट नहीं हो सका'}`
       }
     }
 
-    // 3. AI assistant response save
+    // 3. AI response save
     if (convId) {
       await supabase.from('ai_messages').insert({
         conversation_id: convId,
@@ -112,5 +118,5 @@ export async function POST(req: Request) {
       sources: [],
     })
   }
-             }
-          
+                 }
+      
