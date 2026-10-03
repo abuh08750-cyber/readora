@@ -82,7 +82,47 @@ export async function POST(req: Request) {
   }
 }
 
-// 2. DELETE: Remove Book and related storage
+// 2. PUT: Edit & Update Book Details
+export async function PUT(req: Request) {
+  try {
+    const supabase = await supabaseServer()
+    const { data: { session } } = await supabase.auth.getSession()
+
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { id, title, author, category, price, description } = await req.json()
+
+    if (!id || !title || !author) {
+      return NextResponse.json({ error: 'Missing book fields' }, { status: 400 })
+    }
+
+    const numPrice = Number(price) || 0
+
+    const { error: updateErr } = await supabase
+      .from('books')
+      .update({
+        title,
+        author,
+        category,
+        price: numPrice,
+        is_paid: numPrice > 0,
+        description,
+      })
+      .eq('id', id)
+
+    if (updateErr) {
+      return NextResponse.json({ error: updateErr.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || 'Update failed' }, { status: 500 })
+  }
+}
+
+// 3. DELETE: Remove Book and related storage
 export async function DELETE(req: Request) {
   try {
     const supabase = await supabaseServer()
@@ -112,5 +152,5 @@ export async function DELETE(req: Request) {
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Delete failed' }, { status: 500 })
   }
-  }
+                                     }
       
