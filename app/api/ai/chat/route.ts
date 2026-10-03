@@ -44,41 +44,59 @@ export async function POST(req: Request) {
     let assistantReply = ''
 
     if (!apiKey) {
-      assistantReply = 'Vercel settings me GEMINI_API_KEY missing hai.'
+      assistantReply = 'Vercel settings में GEMINI_API_KEY मौजूद नहीं है।'
     } else {
-      // Sirf active aur recommended model use karenge
-      const model = 'gemini-3.8-flash'
-      try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-goog-api-key': apiKey,
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                role: 'user',
-                parts: [
+      // Primary model ke busy/high-demand hone par fallback models
+      const models = [
+        'gemini-3.8-flash',
+        'gemini-3.0-flash',
+        'gemini-3.1-pro-preview'
+      ]
+
+      let lastError = ''
+
+      for (const model of models) {
+        try {
+          const res = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-goog-api-key': apiKey,
+              },
+              body: JSON.stringify({
+                contents: [
                   {
-                    text: `You are Readora AI, a friendly and intelligent assistant for the Readora eBook platform. Provide clear, direct, and well-structured answers using markdown.\n\nUser Question: ${message}`,
+                    role: 'user',
+                    parts: [
+                      {
+                        text: `You are Readora AI, a friendly and intelligent assistant for the Readora eBook platform. Provide clear, direct, and well-structured answers using markdown.\n\nUser Question: ${message}`,
+                      },
+                    ],
                   },
                 ],
-              },
-            ],
-          }),
-        })
+              }),
+            }
+          )
 
-        const data = await res.json()
-        if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
-          assistantReply = data.candidates[0].content.parts[0].text
-        } else if (data.error?.message) {
-          assistantReply = `Gemini Error: ${data.error.message}`
-        } else {
-          assistantReply = 'Uttar generate nahi ho saka. Kripya punha prayatna karein.'
+          const data = await res.json()
+
+          if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
+            assistantReply = data.candidates[0].content.parts[0].text
+            break // Sahi uttar milte hi loop se bahar
+          } else if (data.error?.message) {
+            lastError = data.error.message
+            // Agar high demand ya error hai, agle model ko try karega
+            continue
+          }
+        } catch (e: any) {
+          lastError = e.message || 'Network error'
         }
-      } catch (e: any) {
-        assistantReply = `Network issue: ${e.message || 'Please retry'}`
+      }
+
+      if (!assistantReply) {
+        assistantReply = `Gemini Error: ${lastError || 'Server busy, kripya thodi der baad prayatna karein.'}`
       }
     }
 
@@ -111,5 +129,5 @@ export async function POST(req: Request) {
       sources: [],
     })
   }
-  }
-            
+            }
+        
