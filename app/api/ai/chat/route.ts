@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     const userId = session.user.id
     let convId = conversationId
 
-    // 1. Agar nayi conversation hai to create karein
+    // 1. New conversation create karein
     if (!convId) {
       const title = message.slice(0, 36) + (message.length > 36 ? '...' : '')
       const { data: newConv } = await supabase
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // 2. User message save karein
+    // 2. User message insert karein
     if (convId) {
       await supabase.from('ai_messages').insert({
         conversation_id: convId,
@@ -42,64 +42,47 @@ export async function POST(req: Request) {
       })
     }
 
-    // 3. Past messages fetch karein context ke liye
-    let formattedMessages: any[] = []
-    if (convId) {
-      const { data: pastMsgs } = await supabase
-        .from('ai_messages')
-        .select('role, content')
-        .eq('conversation_id', convId)
-        .order('created_at', { ascending: true })
-        .limit(6)
-
-      formattedMessages = (pastMsgs || []).map((m: any) => ({
-        role: m.role,
-        content: m.content,
-      }))
-    }
-
-    const apiKey = process.env.OPENAI_API_KEY
+    const apiKey = process.env.GEMINI_API_KEY
     let assistantReply = ''
 
     if (!apiKey) {
-      assistantReply = `Hello! Readora AI is online. However, the OPENAI_API_KEY environment variable is missing on Vercel. Please add it and redeploy.`
+      assistantReply = 'Vercel settings mein GEMINI_API_KEY missing hai. Kripya environment variable check karein.'
     } else {
       try {
-        const openAiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`
+        
+        const response = await fetch(geminiUrl, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${apiKey}`,
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            model: 'gpt-4o-mini',
-            messages: [
+            contents: [
               {
-                role: 'system',
-                content:
-                  'You are Readora AI, a helpful, intelligent library assistant for the Readora eBook platform. Format answers clearly using markdown bullets and headings when appropriate.',
-              },
-              ...formattedMessages,
-              { role: 'user', content: message },
-            ],
-          }),
+                role: 'user',
+                parts: [
+                  {
+                    text: `You are Readora AI, a friendly, helpful, and knowledgeable library assistant for the Readora eBook platform. Provide clear, well-structured answers using markdown formatting.\n\nUser Question: ${message}`
+                  }
+                ]
+              }
+            ]
+          })
         })
 
-        const aiData = await openAiRes.json()
+        const geminiData = await response.json()
 
-        if (aiData.choices && aiData.choices[0]?.message?.content) {
-          assistantReply = aiData.choices[0].message.content
-        } else if (aiData.error) {
-          assistantReply = `OpenAI API Error: ${aiData.error.message || 'Check billing or API key limits.'}`
+        if (geminiData.candidates && geminiData.candidates[0]?.content?.parts?.[0]?.text) {
+          assistantReply = geminiData.candidates[0].content.parts[0].text
+        } else if (geminiData.error) {
+          assistantReply = `Gemini API Error: ${geminiData.error.message || 'API request failed'}`
         } else {
-          assistantReply = "I could not generate an answer right now. Please try again."
+          assistantReply = 'Maaf kijiye, abhi uttar taiyar nahi ho paya. Dobara koshish karein.'
         }
       } catch (err: any) {
-        assistantReply = `AI service temporarily unavailable. Error: ${err.message || 'Fetch error'}`
+        assistantReply = `AI service connect nahi ho saki: ${err.message || 'Network error'}`
       }
     }
 
-    // 4. Assistant reply save karein
+    // 3. AI assistant response save karein
     if (convId) {
       await supabase.from('ai_messages').insert({
         conversation_id: convId,
@@ -128,5 +111,5 @@ export async function POST(req: Request) {
       sources: [],
     })
   }
-          }
-                              
+    }
+          
