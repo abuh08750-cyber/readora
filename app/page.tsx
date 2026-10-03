@@ -17,6 +17,7 @@ export default function HomePage() {
   const [user, setUser] = useState<any>(null)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [aiQuestion, setAiQuestion] = useState('')
   const [readingFile, setReadingFile] = useState<string | null>(null)
   const [readingTitle, setReadingTitle] = useState('')
   const [htmlData, setHtmlData] = useState<string | null>(null)
@@ -123,7 +124,16 @@ export default function HomePage() {
       try { sessionStorage.setItem('readora_pending_target', '/categories') } catch {}
       setShowAuthModal(true)
     }
+  }
+
+  const handleAskAI = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!aiQuestion.trim()) {
+      window.location.href = '/ai'
+      return
     }
+    window.location.href = `/ai?q=${encodeURIComponent(aiQuestion.trim())}`
+  }
 
   const handleAddToLibrary = (bookId: string) => {
     if (!user) {
@@ -255,7 +265,8 @@ export default function HomePage() {
 
   return (
     <div style={{ backgroundColor: '#040711', color: '#f8fafc', minHeight: '100vh', width: '100%', overflowX: 'hidden', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-      {/* Header */}
+      
+      {/* 1. Header with AI Assistant Tab */}
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 28px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#040711', position: 'sticky', top: 0, zIndex: 50 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '20px', fontWeight: '800', cursor: 'pointer' }} onClick={() => { setSelectedCategoryFilter(null); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
@@ -265,6 +276,9 @@ export default function HomePage() {
             <span style={{ color: '#fff', borderBottom: '2px solid #2563eb', paddingBottom: '4px', cursor: 'pointer' }} onClick={() => { setSelectedCategoryFilter(null); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Home</span>
             <span style={{ color: '#94a3b8', cursor: 'pointer' }} onClick={handleLibraryClick}>Library</span>
             <span style={{ color: '#94a3b8', cursor: 'pointer' }} onClick={handleCategoryClick}>Categories</span>
+            <span style={{ color: '#38bdf8', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }} onClick={() => window.location.href = '/ai'}>
+              ✨ AI Assistant
+            </span>
           </nav>
         </div>
 
@@ -285,25 +299,83 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* Hero */}
-      <section style={{ position: 'relative', minHeight: '360px', display: 'flex', alignItems: 'center', background: "linear-gradient(to right, rgba(0,0,0,0.85) 35%, rgba(0,0,0,0.6) 65%, rgba(0,0,0,0.2) 100%), url('https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=1600&auto=format&fit=crop&q=80')", backgroundSize: 'cover', backgroundPosition: 'right 30%', padding: '40px 32px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <div style={{ maxWidth: '540px' }}>
-          <h1 style={{ fontSize: '44px', fontWeight: '900', lineHeight: 1.1, margin: '0 0 14px', letterSpacing: '-1px', color: '#fff' }}>
-            Read More, <br /><span style={{ color: '#38bdf8', fontStyle: 'italic', fontFamily: 'serif' }}>Grow Further</span>
-          </h1>
-          <p style={{ color: '#cbd5e1', fontSize: '14px', lineHeight: 1.5, margin: '0 0 20px' }}>
-            Discover amazing books, explore new ideas, and build a better you — one page at a time.
-          </p>
+      {/* 2. Hero Section: Book Search + Ask Readora AI Card */}
+      <section style={{
+        position: 'relative',
+        minHeight: '380px',
+        display: 'flex',
+        alignItems: 'center',
+        background: "linear-gradient(to right, rgba(4,7,17,0.92) 35%, rgba(4,7,17,0.85) 70%, rgba(4,7,17,0.7) 100%), url('https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=1600&auto=format&fit=crop&q=80')",
+        backgroundSize: 'cover',
+        backgroundPosition: 'right 30%',
+        padding: '40px 32px',
+        borderBottom: '1px solid rgba(255,255,255,0.06)'
+      }}>
+        <div style={{ maxWidth: '1350px', width: '100%', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '30px' }}>
+          
+          {/* Left Hero Title & Search */}
+          <div style={{ maxWidth: '520px' }}>
+            <h1 style={{ fontSize: '44px', fontWeight: '900', lineHeight: 1.1, margin: '0 0 14px', letterSpacing: '-1px', color: '#fff' }}>
+              Read More, <br /><span style={{ color: '#38bdf8', fontStyle: 'italic', fontFamily: 'serif' }}>Grow Further</span>
+            </h1>
+            <p style={{ color: '#cbd5e1', fontSize: '14px', lineHeight: 1.5, margin: '0 0 20px' }}>
+              Discover amazing books, explore new ideas, and build a better you — one page at a time.
+            </p>
 
-          <div style={{ display: 'flex', alignItems: 'center', background: '#ffffff', borderRadius: '40px', padding: '4px 6px 4px 16px', maxWidth: '420px' }}>
-            <span style={{ color: '#94a3b8', marginRight: '6px' }}>🔍</span>
-            <input type="text" placeholder="Search books, authors..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ border: 'none', outline: 'none', flex: 1, fontSize: '13px', color: '#1e293b' }} />
-            <button style={{ background: '#2563eb', border: 'none', width: '34px', height: '34px', borderRadius: '50%', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '13px' }}>➔</button>
+            <div style={{ display: 'flex', alignItems: 'center', background: '#ffffff', borderRadius: '40px', padding: '4px 6px 4px 16px', maxWidth: '420px' }}>
+              <span style={{ color: '#94a3b8', marginRight: '6px' }}>🔍</span>
+              <input type="text" placeholder="Search books, authors..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ border: 'none', outline: 'none', flex: 1, fontSize: '13px', color: '#1e293b' }} />
+              <button style={{ background: '#2563eb', border: 'none', width: '34px', height: '34px', borderRadius: '50%', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '13px' }}>➔</button>
+            </div>
           </div>
+
+          {/* Right Hero: "Ask Readora AI" Card */}
+          <div style={{
+            background: 'linear-gradient(145deg, rgba(13,25,55,0.85) 0%, rgba(6,12,28,0.92) 100%)',
+            border: '1.5px solid rgba(56,189,248,0.25)',
+            borderRadius: '24px',
+            padding: '24px 22px',
+            maxWidth: '430px',
+            width: '100%',
+            boxShadow: '0 12px 40px rgba(0,0,0,0.6), 0 0 25px rgba(37,99,235,0.2)',
+            backdropFilter: 'blur(10px)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+              <span style={{ fontSize: '24px', filter: 'drop-shadow(0 0 8px #38bdf8)' }}>✨</span>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#fff' }}>
+                Ask <span style={{ color: '#38bdf8' }}>Readora AI</span>
+              </h3>
+            </div>
+            <p style={{ color: '#94a3b8', fontSize: '12px', margin: '0 0 16px' }}>
+              Ask anything. Get clear, intelligent answers.
+            </p>
+
+            <form onSubmit={handleAskAI} style={{ display: 'flex', alignItems: 'center', background: '#070e20', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '30px', padding: '4px 6px 4px 14px', marginBottom: '10px' }}>
+              <span style={{ color: '#38bdf8', marginRight: '8px', fontSize: '14px' }}>✨</span>
+              <input
+                type="text"
+                placeholder="Ask anything..."
+                value={aiQuestion}
+                onChange={e => setAiQuestion(e.target.value)}
+                style={{ background: 'transparent', border: 'none', outline: 'none', color: '#fff', fontSize: '13px', flex: 1 }}
+              />
+              <button
+                type="submit"
+                style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '8px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}
+              >
+                Ask AI →
+              </button>
+            </form>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#64748b' }}>
+              <span>ℹ️</span> Readora AI can search the web for current information.
+            </div>
+          </div>
+
         </div>
       </section>
 
-      {/* Featured Books Grid */}
+      {/* 3. Featured Books Grid */}
       <section style={{ padding: '36px 28px 60px', maxWidth: '1400px', margin: '0 auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '20px' }}>
           <div>
@@ -355,7 +427,33 @@ export default function HomePage() {
         )}
       </section>
 
-      {/* Modern Dark Split Auth Modal */}
+      {/* 4. Floating Circular Glowing AI Button */}
+      <div
+        onClick={() => window.location.href = '/ai'}
+        style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          width: '56px',
+          height: '56px',
+          borderRadius: '50%',
+          background: 'linear-gradient(135deg, #1e3a8a, #2563eb, #7c3aed)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '24px',
+          cursor: 'pointer',
+          boxShadow: '0 8px 25px rgba(37,99,235,0.5), 0 0 20px rgba(124,58,237,0.4)',
+          border: '1.5px solid rgba(255,255,255,0.3)',
+          zIndex: 99,
+          transition: 'transform 0.2s ease',
+        }}
+        title="Ask Readora AI"
+      >
+        ✨
+      </div>
+
+      {/* Auth Modal */}
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => {
@@ -368,4 +466,4 @@ export default function HomePage() {
       />
     </div>
   )
-                                             }
+                        }
