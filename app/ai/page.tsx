@@ -31,7 +31,7 @@ export default function ReadoraAIChatPage() {
         return
       }
       setUser(session.user)
-      loadConversations(session.user.id)
+      loadConversations()
 
       if (typeof window !== 'undefined') {
         const params = new URLSearchParams(window.location.search)
@@ -48,19 +48,15 @@ export default function ReadoraAIChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loadingReply])
 
-  async function loadConversations(userId: string) {
+  async function loadConversations() {
     try {
-      const { data, error } = await supabase
-        .from('ai_conversations')
-        .select('*')
-        .eq('user_id', userId)
-        .order('updated_at', { ascending: false })
-
-      if (data && !error) {
-        setConversations(data)
+      const res = await fetch('/api/ai/history')
+      const data = await res.json()
+      if (data.success && Array.isArray(data.conversations)) {
+        setConversations(data.conversations)
       }
     } catch (e) {
-      console.error('Failed to load conversations:', e)
+      console.error('History load karne me error:', e)
     }
   }
 
@@ -80,23 +76,20 @@ export default function ReadoraAIChatPage() {
     setMessages([])
     setInputVal('')
     setSelectedFile(null)
-    if (user?.id) {
-      loadConversations(user.id)
-    }
+    loadConversations()
   }
 
-  // Voice Recognition Support (Web Speech API)
   function handleVoiceInput() {
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
 
     if (!SpeechRecognition) {
-      alert('Aapke browser me Voice Recognition support nahi hai. Chrome ya Edge use karein.')
+      alert('Aapke browser me Voice Recognition support nahi hai. Chrome browser use karein.')
       return
     }
 
     const recognition = new SpeechRecognition()
-    recognition.lang = 'hi-IN' // Hindi + English
+    recognition.lang = 'hi-IN'
     recognition.interimResults = false
 
     recognition.onstart = () => {
@@ -159,9 +152,7 @@ export default function ReadoraAIChatPage() {
         if (data.conversationId) {
           setCurrentConvId(data.conversationId)
         }
-        if (user?.id) {
-          loadConversations(user.id)
-        }
+        loadConversations()
       } else {
         setMessages(prev => [
           ...prev,
@@ -248,32 +239,31 @@ export default function ReadoraAIChatPage() {
             <span>🕒</span> Recent Conversations
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', overflowY: 'auto', maxHeight: 'calc(100vh - 350px)' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', overflowY: 'auto', maxHeight: 'calc(100vh - 350px)' }}>
             {filteredConversations.length === 0 ? (
-              <span style={{ fontSize: '11px', color: '#475569', padding: '8px 6px' }}>No previous chats</span>
+              <span style={{ fontSize: '12px', color: '#64748b', padding: '8px 6px' }}>No previous chats</span>
             ) : (
               filteredConversations.map(c => (
                 <div
                   key={c.id}
                   onClick={() => loadMessages(c.id)}
                   style={{
-                    padding: '9px 12px',
+                    padding: '10px 12px',
                     borderRadius: '10px',
-                    background: currentConvId === c.id ? '#0d1935' : 'transparent',
-                    border: currentConvId === c.id ? '1px solid rgba(56,189,248,0.2)' : '1px solid transparent',
-                    color: currentConvId === c.id ? '#fff' : '#94a3b8',
+                    background: currentConvId === c.id ? '#1e293b' : '#0d1527',
+                    border: currentConvId === c.id ? '1px solid #38bdf8' : '1px solid rgba(255,255,255,0.05)',
+                    color: currentConvId === c.id ? '#fff' : '#cbd5e1',
                     cursor: 'pointer',
-                    fontSize: '12px',
+                    fontSize: '13px',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
                   }}
                 >
                   <span>💬</span>
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.title}</span>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {c.title || 'Untitled Chat'}
+                  </span>
                 </div>
               ))
             )}
@@ -286,7 +276,6 @@ export default function ReadoraAIChatPage() {
             <span>⚙️</span> Settings
           </div>
           
-          {/* Help & Support Button Fix */}
           <div
             onClick={() => {
               window.open('mailto:support@readora.com?subject=Readora%20AI%20Help%20and%20Support', '_blank')
@@ -339,11 +328,9 @@ export default function ReadoraAIChatPage() {
           </div>
         </header>
 
-        {/* Message Container / Empty State */}
+        {/* Message Container */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '24px 32px 130px', display: 'flex', flexDirection: 'column' }}>
-          
           {messages.length === 0 ? (
-            /* Empty State */
             <div style={{ margin: 'auto', textAlign: 'center', maxWidth: '780px', width: '100%', padding: '20px 0' }}>
               <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'linear-gradient(135deg, #2563eb, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', margin: '0 auto 16px', boxShadow: '0 0 30px rgba(139,92,246,0.4)' }}>
                 ✨
@@ -355,7 +342,6 @@ export default function ReadoraAIChatPage() {
                 Ask questions, explore ideas, understand topics, and discover information from around the world.
               </p>
 
-              {/* 4 Suggestion Cards */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '12px' }}>
                 {[
                   { icon: '💡', title: 'Explain something', sub: 'to me', q: 'Explain how machine learning works in simple terms.' },
@@ -392,13 +378,10 @@ export default function ReadoraAIChatPage() {
               </div>
             </div>
           ) : (
-            /* Active Chat Stream */
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '850px', width: '100%', margin: '0 auto' }}>
               {messages.map((m: any) => (
                 <div key={m.id} style={{ display: 'flex', flexDirection: 'column', alignItems: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
-                  
                   {m.role === 'user' ? (
-                    /* User Bubble */
                     <div style={{ maxWidth: '75%', background: '#1d4ed8', color: '#fff', padding: '12px 18px', borderRadius: '18px 18px 4px 18px', fontSize: '14px', lineHeight: 1.5, boxShadow: '0 2px 10px rgba(0,0,0,0.3)' }}>
                       {m.content}
                       <span style={{ display: 'block', fontSize: '10px', color: 'rgba(255,255,255,0.7)', marginTop: '4px', textAlign: 'right' }}>
@@ -406,39 +389,15 @@ export default function ReadoraAIChatPage() {
                       </span>
                     </div>
                   ) : (
-                    /* AI Answer Card */
                     <div style={{ display: 'flex', gap: '12px', maxWidth: '88%' }}>
                       <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'linear-gradient(135deg, #2563eb, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', flexShrink: 0 }}>
                         ✨
                       </div>
                       <div style={{ background: '#091024', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '18px', padding: '16px 20px', color: '#e2e8f0', fontSize: '14px', lineHeight: 1.6 }}>
                         <div style={{ whiteSpace: 'pre-wrap' }}>{m.content}</div>
-
-                        {/* Clickable Sources */}
-                        {m.sources && m.sources.length > 0 && (
-                          <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                            <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 'bold', marginBottom: '8px' }}>
-                              🔗 Sources
-                            </div>
-                            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                              {m.sources.map((src: any, sIdx: number) => (
-                                <a
-                                  key={sIdx}
-                                  href={src.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  style={{ background: '#050a15', border: '1px solid rgba(255,255,255,0.08)', padding: '6px 12px', borderRadius: '8px', fontSize: '11px', color: '#38bdf8', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}
-                                >
-                                  <span>🌐</span> {src.title || src.url}
-                                </a>
-                              ))}
-                            </div>
-                          </div>
-                        )}
                       </div>
                     </div>
                   )}
-
                 </div>
               ))}
 
@@ -453,21 +412,17 @@ export default function ReadoraAIChatPage() {
               <div ref={messagesEndRef} />
             </div>
           )}
-
         </div>
 
         {/* 3. Bottom Fixed Input Bar */}
         <div style={{ position: 'absolute', bottom: '0', left: 0, right: 0, background: 'linear-gradient(to top, #050a15 70%, transparent)', padding: '16px 32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          
-          {/* File Selected Badge */}
           {selectedFile && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#0f172a', border: '1px solid rgba(56,189,248,0.3)', padding: '4px 12px', borderRadius: '20px', marginBottom: '8px', fontSize: '12px', color: '#38bdf8' }}>
-              <span>🖼️ {selectedFile.name}</span>
+              <span>🖼️️ {selectedFile.name}</span>
               <span onClick={() => setSelectedFile(null)} style={{ cursor: 'pointer', fontWeight: 'bold' }}>✕</span>
             </div>
           )}
 
-          {/* Hidden File Picker Input */}
           <input
             type="file"
             accept="image/*"
@@ -495,11 +450,10 @@ export default function ReadoraAIChatPage() {
               boxShadow: '0 8px 30px rgba(0,0,0,0.5)',
             }}
           >
-            {/* Gallery Attachment Icon */}
             <span
               onClick={() => fileInputRef.current?.click()}
               style={{ color: '#64748b', cursor: 'pointer', fontSize: '18px' }}
-              title="Upload Image from Gallery"
+              title="Upload Image"
             >
               📎
             </span>
@@ -512,7 +466,6 @@ export default function ReadoraAIChatPage() {
               style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#fff', fontSize: '14px' }}
             />
 
-            {/* Voice Input Microphone Icon */}
             <span
               onClick={handleVoiceInput}
               style={{
@@ -524,7 +477,7 @@ export default function ReadoraAIChatPage() {
               }}
               title="Voice Input"
             >
-              🎙️️
+              🎙
             </span>
 
             <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(139,92,246,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', color: '#c084fc' }}>
@@ -559,4 +512,4 @@ export default function ReadoraAIChatPage() {
       </main>
     </div>
   )
-                   }
+                 }
