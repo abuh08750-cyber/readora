@@ -10,9 +10,9 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
 })
 
+// Yahan apna authorized admin email likhein
 const ADMIN_EMAILS = ['admin@readora.com', 'abu@readora.com']
 
-// Complete 100+ Categories List
 const allCategoriesList = [
   'Fiction', 'Non-Fiction', 'Romance', 'Mystery', 'Thriller', 'Crime', 'Horror', 'Fantasy',
   'Science Fiction', 'Adventure', 'Historical Fiction', 'Historical', 'Biography', 'Autobiography',
@@ -40,15 +40,15 @@ const allCategoriesList = [
 
 export default function AdminDashboardPage() {
   const [user, setUser] = useState<any>(null)
-  const [isAdmin, setIsAdmin] = useState(false)
   const [loadingAuth, setLoadingAuth] = useState(true)
 
+  // Real Database Stats
   const [books, setBooks] = useState<any[]>([])
-  const [totalUsers, setTotalUsers] = useState<number>(0)
+  const [totalUsers, setTotalUsers] = useState<number>(1)
   const [totalOrders, setTotalOrders] = useState<number>(0)
   const [totalRevenue, setTotalRevenue] = useState<number>(0)
 
-  // Upload Form Inputs
+  // Form Inputs
   const [title, setTitle] = useState('')
   const [author, setAuthor] = useState('')
   const [category, setCategory] = useState('')
@@ -63,7 +63,7 @@ export default function AdminDashboardPage() {
   const [categoryFilter, setCategoryFilter] = useState('All')
   const [statusFilter, setStatusFilter] = useState('All')
 
-  // Edit Book Modal State
+  // Edit Modal State
   const [editingBook, setEditingBook] = useState<any | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [editAuthor, setEditAuthor] = useState('')
@@ -72,11 +72,11 @@ export default function AdminDashboardPage() {
   const [editDescription, setEditDescription] = useState('')
   const [isUpdating, setIsUpdating] = useState(false)
 
-  // In-dashboard Live Reader State (Fix raw code issue)
+  // Live Reader Modal
   const [previewHtml, setPreviewHtml] = useState<string | null>(null)
   const [previewTitle, setPreviewTitle] = useState('')
 
-  // Delete Modal State
+  // Delete Confirmation Modal
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -89,40 +89,45 @@ export default function AdminDashboardPage() {
       }
 
       setUser(currentUser)
-      setIsAdmin(true)
       setLoadingAuth(false)
       loadAllDashboardData()
     })
   }, [])
 
   async function loadAllDashboardData() {
+    // 1. Fetch books
     const { data: bookData } = await supabase
       .from('books')
       .select('*')
       .order('created_at', { ascending: false })
-    
+
     if (bookData) {
       setBooks(bookData)
     }
 
+    // 2. Fetch real stats from backend API
     try {
-      const { data: purchaseData } = await supabase.from('purchases').select('amount, status')
-      if (purchaseData) {
-        setTotalOrders(purchaseData.length)
-        const revenue = purchaseData
-          .filter(p => p.status === 'paid')
-          .reduce((sum, current) => sum + (Number(current.amount) || 0), 0)
-        setTotalRevenue(revenue)
+      const res = await fetch('/api/admin/orders')
+      const data = await res.json()
+      if (data.success && data.stats) {
+        setTotalOrders(data.stats.totalOrders || 0)
+        setTotalRevenue(data.stats.totalSales || 0)
       }
     } catch {}
 
-    setTotalUsers(Math.max(1, (bookData?.length || 0) * 4 + 6))
+    // 3. Approximate Users Count fallback
+    try {
+      const { count } = await supabase.from('orders').select('user_id', { count: 'exact', head: true })
+      setTotalUsers(Math.max(1, count || 1))
+    } catch {
+      setTotalUsers(1)
+    }
   }
 
   async function handleBookUpload(e: React.FormEvent) {
     e.preventDefault()
     if (!title || !author || !category || !ebookFile) {
-      alert('Kripya Title, Author, Category aur eBook file fill karein!')
+      alert('Kripya Title, Author, Category aur eBook file upload karein!')
       return
     }
 
@@ -163,7 +168,6 @@ export default function AdminDashboardPage() {
     }
   }
 
-  // Live in-dashboard book preview (Fix raw code issue)
   async function handleViewBook(book: any) {
     const rawUrl = book.file_url || book.file_path
     if (!rawUrl) return
@@ -183,7 +187,6 @@ export default function AdminDashboardPage() {
     }
   }
 
-  // Open Edit Modal
   function handleOpenEdit(book: any) {
     setEditingBook(book)
     setEditTitle(book.title || '')
@@ -193,7 +196,6 @@ export default function AdminDashboardPage() {
     setEditDescription(book.description || '')
   }
 
-  // Save Edit Changes
   async function handleSaveEdit(e: React.FormEvent) {
     e.preventDefault()
     if (!editingBook) return
@@ -269,7 +271,7 @@ export default function AdminDashboardPage() {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#050a15', color: '#f8fafc', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       
-      {/* 1. Left Sidebar Navigation (All buttons working) */}
+      {/* 1. Left Sidebar Navigation */}
       <aside style={{ width: '230px', background: '#070d1d', borderRight: '1px solid rgba(255,255,255,0.06)', padding: '22px 14px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', flexShrink: 0 }}>
         <div>
           <div onClick={() => window.location.href = '/'} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '20px', fontWeight: '800', marginBottom: '28px', paddingLeft: '8px', cursor: 'pointer' }}>
@@ -278,27 +280,60 @@ export default function AdminDashboardPage() {
           </div>
 
           <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
-            <div onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '10px', background: '#2563eb', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>
+            {/* Dashboard */}
+            <div
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '10px',
+                background: '#2563eb', color: '#fff', fontWeight: 'bold', cursor: 'pointer'
+              }}
+            >
               <span>🏠</span> Dashboard
             </div>
-            <div onClick={() => document.getElementById('books-section')?.scrollIntoView({ behavior: 'smooth' })} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '10px', color: '#94a3b8', cursor: 'pointer' }}>
+
+            {/* Books */}
+            <div
+              onClick={() => document.getElementById('books-section')?.scrollIntoView({ behavior: 'smooth' })}
+              style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '10px', color: '#94a3b8', cursor: 'pointer' }}
+            >
               <span>📚</span> Books
             </div>
-            <div onClick={() => document.getElementById('add-book-section')?.scrollIntoView({ behavior: 'smooth' })} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '10px', color: '#94a3b8', cursor: 'pointer' }}>
+
+            {/* Add Book */}
+            <div
+              onClick={() => document.getElementById('add-book-section')?.scrollIntoView({ behavior: 'smooth' })}
+              style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '10px', color: '#94a3b8', cursor: 'pointer' }}
+            >
               <span>➕</span> Add Book
             </div>
+
+            {/* Categories */}
             <div onClick={() => window.location.href = '/categories'} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '10px', color: '#94a3b8', cursor: 'pointer' }}>
               <span>🏷️</span> Categories
             </div>
+
+            {/* Users */}
             <div onClick={() => window.location.href = '/library'} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '10px', color: '#94a3b8', cursor: 'pointer' }}>
-              <span>👥</span> Users
+              <span>👥</span> Users ({totalUsers})
             </div>
-            <div onClick={() => alert('Orders & Sales ledger active. Current orders: ' + totalOrders)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '10px', color: '#94a3b8', cursor: 'pointer' }}>
+
+            {/* Orders & Sales: Direct Navigation to /admin/orders */}
+            <div
+              onClick={() => window.location.href = '/admin/orders'}
+              style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '10px', color: '#94a3b8', cursor: 'pointer' }}
+            >
               <span>🛒</span> Orders & Sales
             </div>
-            <div onClick={() => alert(`Analytics: ${books.length} Books | ₹${totalRevenue} Revenue`)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '10px', color: '#94a3b8', cursor: 'pointer' }}>
+
+            {/* Analytics */}
+            <div
+              onClick={() => window.location.href = '/admin/orders'}
+              style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '10px', color: '#94a3b8', cursor: 'pointer' }}
+            >
               <span>📊</span> Analytics
             </div>
+
+            {/* Settings */}
             <div onClick={() => window.location.href = '/settings'} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '10px', color: '#94a3b8', cursor: 'pointer' }}>
               <span>⚙️</span> Settings
             </div>
@@ -313,7 +348,7 @@ export default function AdminDashboardPage() {
         </div>
       </aside>
 
-      {/* 2. Main Admin Area */}
+      {/* 2. Main Admin Workspace */}
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflowY: 'auto' }}>
         
         {/* Top Header */}
@@ -348,7 +383,7 @@ export default function AdminDashboardPage() {
               <p style={{ margin: 0, color: '#94a3b8', fontSize: '13px' }}>Manage books, users, orders and platform settings.</p>
             </div>
             <div style={{ color: '#94a3b8', fontSize: '12px', fontWeight: '500' }}>
-              October 2026
+              Live System
             </div>
           </div>
 
@@ -359,7 +394,7 @@ export default function AdminDashboardPage() {
               <div>
                 <span style={{ fontSize: '11px', color: '#94a3b8' }}>Total Books</span>
                 <div style={{ fontSize: '22px', fontWeight: '900', color: '#fff' }}>{books.length}</div>
-                <span style={{ fontSize: '10px', color: '#10b981', fontWeight: 'bold' }}>↑ Live Database</span>
+                <span style={{ fontSize: '10px', color: '#10b981', fontWeight: 'bold' }}>Live Database</span>
               </div>
             </div>
 
@@ -367,26 +402,26 @@ export default function AdminDashboardPage() {
               <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(56,189,248,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', color: '#38bdf8' }}>👥</div>
               <div>
                 <span style={{ fontSize: '11px', color: '#94a3b8' }}>Total Users</span>
-                <div style={{ fontSize: '22px', fontWeight: '900', color: '#fff' }}>{totalUsers.toLocaleString()}</div>
+                <div style={{ fontSize: '22px', fontWeight: '900', color: '#fff' }}>{totalUsers}</div>
                 <span style={{ fontSize: '10px', color: '#10b981', fontWeight: 'bold' }}>Active Members</span>
               </div>
             </div>
 
-            <div style={{ background: '#091024', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div onClick={() => window.location.href = '/admin/orders'} style={{ background: '#091024', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '18px', display: 'flex', alignItems: 'center', gap: '14px', cursor: 'pointer' }}>
               <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(168,85,247,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', color: '#c084fc' }}>🛒</div>
               <div>
                 <span style={{ fontSize: '11px', color: '#94a3b8' }}>Total Orders</span>
                 <div style={{ fontSize: '22px', fontWeight: '900', color: '#fff' }}>{totalOrders}</div>
-                <span style={{ fontSize: '10px', color: '#10b981', fontWeight: 'bold' }}>Verified</span>
+                <span style={{ fontSize: '10px', color: '#38bdf8', fontWeight: 'bold' }}>View Orders Page ➔</span>
               </div>
             </div>
 
-            <div style={{ background: '#091024', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div onClick={() => window.location.href = '/admin/orders'} style={{ background: '#091024', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '18px', display: 'flex', alignItems: 'center', gap: '14px', cursor: 'pointer' }}>
               <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(16,185,129,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', color: '#34d399' }}>₹</div>
               <div>
                 <span style={{ fontSize: '11px', color: '#94a3b8' }}>Total Revenue</span>
                 <div style={{ fontSize: '22px', fontWeight: '900', color: '#fff' }}>₹{totalRevenue.toLocaleString()}</div>
-                <span style={{ fontSize: '10px', color: '#10b981', fontWeight: 'bold' }}>Cleared</span>
+                <span style={{ fontSize: '10px', color: '#38bdf8', fontWeight: 'bold' }}>Sales Ledger ➔</span>
               </div>
             </div>
           </div>
@@ -468,7 +503,6 @@ export default function AdminDashboardPage() {
                   />
                 </div>
 
-                {/* Upload boxes for Cover & eBook */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                   <div style={{ border: '1px dashed rgba(56,189,248,0.25)', borderRadius: '12px', padding: '16px', textAlign: 'center', background: '#060c1d' }}>
                     <label style={{ cursor: 'pointer', display: 'block' }}>
@@ -483,7 +517,7 @@ export default function AdminDashboardPage() {
 
                   <div style={{ border: '1px dashed rgba(56,189,248,0.25)', borderRadius: '12px', padding: '16px', textAlign: 'center', background: '#060c1d' }}>
                     <label style={{ cursor: 'pointer', display: 'block' }}>
-                      <div style={{ fontSize: '20px', marginBottom: '4px' }}>☁️</div>
+                      <div style={{ fontSize: '20px', marginBottom: '4px' }}>☁️️</div>
                       <b style={{ fontSize: '12px', color: '#fff', display: 'block' }}>
                         {ebookFile ? ebookFile.name : 'Click to upload eBook file'}
                       </b>
@@ -497,21 +531,10 @@ export default function AdminDashboardPage() {
                   type="submit"
                   disabled={uploading}
                   style={{
-                    marginTop: '8px',
-                    background: '#2563eb',
-                    color: '#fff',
-                    border: 'none',
-                    padding: '12px',
-                    borderRadius: '10px',
-                    fontWeight: 'bold',
-                    fontSize: '13px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    boxShadow: '0 4px 18px rgba(37,99,235,0.3)',
-                    opacity: uploading ? 0.7 : 1,
+                    marginTop: '8px', background: '#2563eb', color: '#fff', border: 'none', padding: '12px',
+                    borderRadius: '10px', fontWeight: 'bold', fontSize: '13px', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                    boxShadow: '0 4px 18px rgba(37,99,235,0.3)', opacity: uploading ? 0.7 : 1,
                   }}
                 >
                   <span>☁️</span>
@@ -656,7 +679,7 @@ export default function AdminDashboardPage() {
                               style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}
                               title="Delete Book"
                             >
-                              🗑️
+                              🗑️️
                             </button>
                           </div>
                         </td>
@@ -667,10 +690,11 @@ export default function AdminDashboardPage() {
               </table>
             </div>
           </div>
+
         </div>
       </main>
 
-      {/* 3. Live Reader Modal (Fixes Raw Code Problem) */}
+      {/* 3. Live Reader Modal */}
       {previewHtml && (
         <div style={{ position: 'fixed', inset: 0, background: '#0B0F17', zIndex: 9999, display: 'flex', flexDirection: 'column' }}>
           <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', background: '#090d16', borderBottom: '1px solid #1e293b' }}>
@@ -799,4 +823,4 @@ export default function AdminDashboardPage() {
       )}
     </div>
   )
-                  }
+              }
