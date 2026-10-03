@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     const userId = session.user.id
     let convId = conversationId
 
-    // 1. New conversation create karein
+    // 1. Conversation create karein
     if (!convId) {
       const title = message.slice(0, 36) + (message.length > 36 ? '...' : '')
       const { data: newConv } = await supabase
@@ -46,54 +46,36 @@ export async function POST(req: Request) {
     if (!apiKey) {
       assistantReply = 'Vercel settings me GEMINI_API_KEY missing hai.'
     } else {
-      // Google dwara recommended active models
-      const modelsToTry = [
-        'gemini-3.0-flash',
-        'gemini-3.1-pro-preview',
-        'gemini-2.0-flash',
-        'gemini-2.0-flash-exp'
-      ]
-
-      let lastError = ''
-      for (const model of modelsToTry) {
-        try {
-          const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
-
-          const res = await fetch(geminiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [
-                {
-                  role: 'user',
-                  parts: [
-                    {
-                      text: `You are Readora AI, a helpful and friendly assistant for the Readora eBook platform. Provide direct, structured answers using markdown.\n\nUser Question: ${message}`,
-                    },
-                  ],
-                },
-              ],
-            }),
+      try {
+        // Official Interactions API endpoint
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/interactions?key=${apiKey}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            input: message,
+            system_instruction: 'You are Readora AI, a helpful library assistant for the Readora eBook platform. Provide clear markdown answers.'
           })
+        })
 
-          const data = await res.json()
-          if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
-            assistantReply = data.candidates[0].content.parts[0].text
-            break // Sahi uttar milte hi loop band
-          } else if (data.error) {
-            lastError = data.error.message || 'API error'
-          }
-        } catch (e: any) {
-          lastError = e.message || 'Network error'
+        const data = await res.json()
+
+        if (data.output?.text) {
+          assistantReply = data.output.text
+        } else if (data.outputs && data.outputs[0]?.text) {
+          assistantReply = data.outputs[0].text
+        } else if (data.error) {
+          assistantReply = `API Details: ${data.error.message || JSON.stringify(data.error)}`
+        } else {
+          assistantReply = JSON.stringify(data)
         }
-      }
-
-      if (!assistantReply) {
-        assistantReply = `Gemini Error: ${lastError || 'Response generate nahi ho saka.'}`
+      } catch (err: any) {
+        assistantReply = `Connection error: ${err.message || 'Failed to fetch'}`
       }
     }
 
-    // 3. AI response database me save karein
+    // 3. AI assistant response save karein
     if (convId) {
       await supabase.from('ai_messages').insert({
         conversation_id: convId,
@@ -122,5 +104,5 @@ export async function POST(req: Request) {
       sources: [],
     })
   }
-          }
+        }
               
