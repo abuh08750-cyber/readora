@@ -30,7 +30,7 @@ export async function POST(req: Request) {
       if (newConv) convId = newConv.id
     }
 
-    // 2. User message insert karein
+    // 2. User message save karein
     if (convId) {
       await supabase.from('ai_messages').insert({
         conversation_id: convId,
@@ -46,12 +46,12 @@ export async function POST(req: Request) {
     if (!apiKey) {
       assistantReply = 'Vercel settings me GEMINI_API_KEY missing hai.'
     } else {
-      // Latest supported models ki list (gemini-2.0-flash priority par)
+      // Jo models Google error me mention kar raha hai unki list
       const modelsToTry = [
-        'gemini-2.0-flash',
-        'gemini-2.5-flash',
-        'gemini-2.0-flash-exp',
-        'gemini-2.5-pro'
+        'gemini-3.0-flash',
+        'gemini-3.1-pro-preview',
+        'gemini-3.0-pro',
+        'gemini-2.0-flash-exp'
       ]
 
       let lastError = ''
@@ -95,7 +95,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // 3. AI assistant response save karein
+    // 3. AI response database me save karein
     if (convId) {
       await supabase.from('ai_messages').insert({
         conversation_id: convId,
@@ -124,5 +124,5 @@ export async function POST(req: Request) {
       sources: [],
     })
   }
-      }
-              
+        }
+            
