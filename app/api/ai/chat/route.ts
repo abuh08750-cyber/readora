@@ -46,15 +46,12 @@ export async function POST(req: Request) {
     if (!apiKey) {
       assistantReply = 'Vercel settings me GEMINI_API_KEY missing hai.'
     } else {
-      // Sirf 100% FREE Flash models (Pro model hata diya gaya hai)
-      const freeModels = [
-        'gemini-3.8-flash',
-        'gemini-3.0-flash'
-      ]
-
+      const model = 'gemini-3.8-flash'
+      const maxRetries = 3
       let lastError = ''
 
-      for (const model of freeModels) {
+      // High demand / traffic spike aane par automatic retry logic
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
           const res = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
@@ -86,7 +83,11 @@ export async function POST(req: Request) {
             break
           } else if (data.error?.message) {
             lastError = data.error.message
-            continue
+            // High demand spike hone par 1.2 second ruko fir dubara try karo
+            if (attempt < maxRetries && lastError.toLowerCase().includes('demand')) {
+              await new Promise((resolve) => setTimeout(resolve, 1200))
+              continue
+            }
           }
         } catch (e: any) {
           lastError = e.message || 'Network error'
@@ -94,7 +95,7 @@ export async function POST(req: Request) {
       }
 
       if (!assistantReply) {
-        assistantReply = `Gemini Error: ${lastError || 'Server busy hai, thodi der baad dobara koshish karein.'}`
+        assistantReply = `Gemini Error: ${lastError || 'Server busy hai, kripya dubara bhejein.'}`
       }
     }
 
@@ -127,5 +128,5 @@ export async function POST(req: Request) {
       sources: [],
     })
   }
-  }
-              
+        }
+                          
