@@ -123,7 +123,7 @@ export default function HomePage() {
       try { sessionStorage.setItem('readora_pending_target', '/categories') } catch {}
       setShowAuthModal(true)
     }
-  }
+    }
 
   const handleAddToLibrary = (bookId: string) => {
     if (!user) {
@@ -178,7 +178,31 @@ export default function HomePage() {
     } catch {
       window.open(full, '_blank')
     }
-}
+  }
+
+  const handleRead = async (book: any) => {
+    if (!user) {
+      setShowAuthModal(true)
+      return
+    }
+    const rawFile = book.file_path || book.file_url || 'https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/ebooks/1790700034105-biegrb.html'
+    const fullUrl = rawFile.startsWith('http') ? rawFile : `https://stuabcdisgmmxprapfai.supabase.co/storage/v1/object/public/ebooks/${rawFile}`
+
+    setReadingTitle(book.title || 'Book Reader')
+
+    if (fullUrl.includes('.html')) {
+      try {
+        const res = await fetch(fullUrl)
+        const text = await res.text()
+        setHtmlData(text)
+        setReadingFile(fullUrl)
+      } catch {
+        window.open(fullUrl, '_blank')
+      }
+    } else {
+      window.open(fullUrl, '_blank')
+    }
+  }
 
   const handleOAuth = async (provider: 'google' | 'facebook') => {
     setAuthError('')
@@ -344,4 +368,4 @@ export default function HomePage() {
       />
     </div>
   )
-                                                                                       }
+                                             }
