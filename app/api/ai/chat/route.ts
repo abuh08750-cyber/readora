@@ -44,47 +44,78 @@ export async function POST(req: Request) {
     let assistantReply = ''
 
     if (!apiKey) {
-      assistantReply = 'Vercel settings में GEMINI_API_KEY मौजूद नहीं है।'
+      assistantReply = 'Vercel settings me GEMINI_API_KEY missing hai.'
     } else {
-      // Models to try with Interactions API
       const modelsToTry = [
+        'gemini-3.8-flash',
         'gemini-3.0-flash',
-        'gemini-3.1-pro-preview',
-        'gemini-2.5-flash',
-        'gemini-2.0-flash'
+        'gemini-3.1-pro-preview'
       ]
 
       let lastError = ''
+
+      // Attempt 1: Direct generateContent endpoint with exact model name
       for (const model of modelsToTry) {
         try {
-          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/interactions?key=${apiKey}`, {
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              model: model,
-              input: message,
-              system_instruction: 'You are Readora AI, a friendly library assistant for the Readora eBook platform. Provide clear markdown answers.'
+              contents: [
+                {
+                  role: 'user',
+                  parts: [
+                    {
+                      text: `You are Readora AI, a helpful library assistant for the Readora eBook platform. Provide clear markdown answers.\n\nUser Question: ${message}`
+                    }
+                  ]
+                }
+              ]
             })
           })
 
           const data = await res.json()
-
-          if (data.output?.text) {
-            assistantReply = data.output.text
-            break
-          } else if (data.outputs && data.outputs[0]?.text) {
-            assistantReply = data.outputs[0].text
-            break
-          } else if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+          if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
             assistantReply = data.candidates[0].content.parts[0].text
             break
-          } else if (data.error) {
-            lastError = data.error.message || 'API error'
+          } else if (data.error?.message) {
+            lastError = data.error.message
           }
         } catch (e: any) {
           lastError = e.message || 'Network error'
+        }
+      }
+
+      // Attempt 2: Interactions endpoint fallback
+      if (!assistantReply) {
+        for (const model of modelsToTry) {
+          try {
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/interactions?key=${apiKey}`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                model: model,
+                input: message
+              })
+            })
+
+            const data = await res.json()
+            if (data.output?.text) {
+              assistantReply = data.output.text
+              break
+            } else if (data.outputs?.[0]?.text) {
+              assistantReply = data.outputs[0].text
+              break
+            } else if (data.error?.message) {
+              lastError = data.error.message
+            }
+          } catch (e: any) {
+            lastError = e.message || 'Network error'
+          }
         }
       }
 
@@ -93,7 +124,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // 3. AI assistant response save karein
+    // 3. AI response database me save karein
     if (convId) {
       await supabase.from('ai_messages').insert({
         conversation_id: convId,
@@ -122,4 +153,5 @@ export async function POST(req: Request) {
       sources: [],
     })
   }
-}
+        }
+      
