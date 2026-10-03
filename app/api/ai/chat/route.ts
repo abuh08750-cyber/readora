@@ -44,18 +44,17 @@ export async function POST(req: Request) {
     let assistantReply = ''
 
     if (!apiKey) {
-      assistantReply = 'Vercel settings में GEMINI_API_KEY मौजूद नहीं है।'
+      assistantReply = 'Vercel settings me GEMINI_API_KEY missing hai.'
     } else {
-      // Primary model ke busy/high-demand hone par fallback models
-      const models = [
+      // Sirf 100% FREE Flash models (Pro model hata diya gaya hai)
+      const freeModels = [
         'gemini-3.8-flash',
-        'gemini-3.0-flash',
-        'gemini-3.1-pro-preview'
+        'gemini-3.0-flash'
       ]
 
       let lastError = ''
 
-      for (const model of models) {
+      for (const model of freeModels) {
         try {
           const res = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
@@ -84,10 +83,9 @@ export async function POST(req: Request) {
 
           if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
             assistantReply = data.candidates[0].content.parts[0].text
-            break // Sahi uttar milte hi loop se bahar
+            break
           } else if (data.error?.message) {
             lastError = data.error.message
-            // Agar high demand ya error hai, agle model ko try karega
             continue
           }
         } catch (e: any) {
@@ -96,7 +94,7 @@ export async function POST(req: Request) {
       }
 
       if (!assistantReply) {
-        assistantReply = `Gemini Error: ${lastError || 'Server busy, kripya thodi der baad prayatna karein.'}`
+        assistantReply = `Gemini Error: ${lastError || 'Server busy hai, thodi der baad dobara koshish karein.'}`
       }
     }
 
@@ -129,5 +127,5 @@ export async function POST(req: Request) {
       sources: [],
     })
   }
-            }
-        
+  }
+              
