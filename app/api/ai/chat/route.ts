@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     const userId = session.user.id
     let convId = conversationId
 
-    // 1. New conversation
+    // 1. New conversation create karein
     if (!convId) {
       const title = message.slice(0, 36) + (message.length > 36 ? '...' : '')
       const { data: newConv } = await supabase
@@ -27,12 +27,10 @@ export async function POST(req: Request) {
         .select()
         .single()
 
-      if (newConv) {
-        convId = newConv.id
-      }
+      if (newConv) convId = newConv.id
     }
 
-    // 2. User message save
+    // 2. User message save karein
     if (convId) {
       await supabase.from('ai_messages').insert({
         conversation_id: convId,
@@ -46,50 +44,57 @@ export async function POST(req: Request) {
     let assistantReply = ''
 
     if (!apiKey) {
-      assistantReply = 'Vercel सेटिंग्स में GEMINI_API_KEY नहीं मिली।'
+      assistantReply = 'Vercel settings me GEMINI_API_KEY missing hai.'
     } else {
-      // अलग-अलग मान्य वर्ज़न ट्राय करने की लिस्ट
-      const candidateUrls = [
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`,
-        `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${apiKey}`,
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent?key=${apiKey}`
+      // Direct models list try karein with both query param and header authentication
+      const endpoints = [
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`
       ]
 
-      let lastErrorMsg = ''
-      for (const url of candidateUrls) {
+      let lastError = ''
+      for (const endpoint of endpoints) {
         try {
-          const res = await fetch(url, {
+          const res = await fetch(endpoint, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'x-goog-api-key': apiKey,
+            },
             body: JSON.stringify({
               contents: [
                 {
                   role: 'user',
-                  parts: [{ text: `You are Readora AI, a friendly, intelligent assistant for the Readora eBook platform. Provide helpful, well-formatted answers.\n\nUser Question: ${message}` }]
-                }
-              ]
-            })
+                  parts: [
+                    {
+                      text: `You are Readora AI, a friendly, intelligent assistant for the Readora eBook platform. Provide clear, direct, and well-structured answers using markdown.\n\nUser Question: ${message}`,
+                    },
+                  ],
+                },
+              ],
+            }),
           })
 
           const data = await res.json()
           if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
             assistantReply = data.candidates[0].content.parts[0].text
-            break // उत्तर मिलते ही लूप बंद
+            break
           } else if (data.error) {
-            lastErrorMsg = data.error.message || 'API error'
+            lastError = data.error.message || 'API error'
           }
         } catch (e: any) {
-          lastErrorMsg = e.message || 'Network error'
+          lastError = e.message || 'Network error'
         }
       }
 
       if (!assistantReply) {
-        assistantReply = `Gemini Error: ${lastErrorMsg || 'मॉडल कनेक्ट नहीं हो सका'}`
+        assistantReply = `Gemini Error: ${lastError || 'Could not fetch response'}`
       }
     }
 
-    // 3. AI response save
+    // 3. AI assistant response save karein
     if (convId) {
       await supabase.from('ai_messages').insert({
         conversation_id: convId,
@@ -118,5 +123,5 @@ export async function POST(req: Request) {
       sources: [],
     })
   }
-                 }
-      
+  }
+        
