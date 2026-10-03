@@ -18,7 +18,11 @@ export default function ReadoraAIChatPage() {
   const [inputVal, setInputVal] = useState('')
   const [searchChats, setSearchChats] = useState('')
   const [loadingReply, setLoadingReply] = useState(false)
+  const [isListening, setIsListening] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -29,7 +33,6 @@ export default function ReadoraAIChatPage() {
       setUser(session.user)
       loadConversations(session.user.id)
 
-      // Handle query passed from Home page hero card
       if (typeof window !== 'undefined') {
         const params = new URLSearchParams(window.location.search)
         const initQ = params.get('q')
@@ -46,14 +49,18 @@ export default function ReadoraAIChatPage() {
   }, [messages, loadingReply])
 
   async function loadConversations(userId: string) {
-    const { data } = await supabase
-      .from('ai_conversations')
-      .select('*')
-      .eq('user_id', userId)
-      .order('updated_at', { ascending: false })
+    try {
+      const { data, error } = await supabase
+        .from('ai_conversations')
+        .select('*')
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: false })
 
-    if (data) {
-      setConversations(data)
+      if (data && !error) {
+        setConversations(data)
+      }
+    } catch (e) {
+      console.error('Failed to load conversations:', e)
     }
   }
 
@@ -72,6 +79,45 @@ export default function ReadoraAIChatPage() {
     setCurrentConvId(null)
     setMessages([])
     setInputVal('')
+    setSelectedFile(null)
+    if (user?.id) {
+      loadConversations(user.id)
+    }
+  }
+
+  // Voice Recognition Support (Web Speech API)
+  function handleVoiceInput() {
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+
+    if (!SpeechRecognition) {
+      alert('Aapke browser me Voice Recognition support nahi hai. Chrome ya Edge use karein.')
+      return
+    }
+
+    const recognition = new SpeechRecognition()
+    recognition.lang = 'hi-IN' // Hindi + English
+    recognition.interimResults = false
+
+    recognition.onstart = () => {
+      setIsListening(true)
+    }
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript
+      setInputVal(prev => (prev ? `${prev} ${transcript}` : transcript))
+      setIsListening(false)
+    }
+
+    recognition.onerror = () => {
+      setIsListening(false)
+    }
+
+    recognition.onend = () => {
+      setIsListening(false)
+    }
+
+    recognition.start()
   }
 
   async function sendMessage(textToSend?: string, targetConvId?: string | null) {
@@ -80,7 +126,6 @@ export default function ReadoraAIChatPage() {
 
     const activeConvId = targetConvId !== undefined ? targetConvId : currentConvId
 
-    // Optimistic UI push
     const userMsg = {
       id: `temp-${Date.now()}`,
       role: 'user',
@@ -89,6 +134,7 @@ export default function ReadoraAIChatPage() {
     }
     setMessages(prev => [...prev, userMsg])
     setInputVal('')
+    setSelectedFile(null)
     setLoadingReply(true)
 
     try {
@@ -110,9 +156,11 @@ export default function ReadoraAIChatPage() {
             created_at: new Date().toISOString(),
           },
         ])
-        if (!activeConvId && data.conversationId) {
+        if (data.conversationId) {
           setCurrentConvId(data.conversationId)
-          if (user) loadConversations(user.id)
+        }
+        if (user?.id) {
+          loadConversations(user.id)
         }
       } else {
         setMessages(prev => [
@@ -120,7 +168,7 @@ export default function ReadoraAIChatPage() {
           {
             id: `err-${Date.now()}`,
             role: 'assistant',
-            content: 'Sorry, I encountered an issue. Please try again.',
+            content: data.reply || 'Ek samasya aayi hai. Kripya punha prayas karein.',
             created_at: new Date().toISOString(),
           },
         ])
@@ -131,7 +179,7 @@ export default function ReadoraAIChatPage() {
         {
           id: `err-${Date.now()}`,
           role: 'assistant',
-          content: 'Network connection error. Please check your connection.',
+          content: 'Network connection issue. Kripya check karein.',
           created_at: new Date().toISOString(),
         },
       ])
@@ -237,7 +285,14 @@ export default function ReadoraAIChatPage() {
           <div onClick={() => window.location.href = '/settings'} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', color: '#94a3b8' }}>
             <span>⚙️</span> Settings
           </div>
-          <div onClick={() => alert('Support: support@readora.com')} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', color: '#94a3b8' }}>
+          
+          {/* Help & Support Button Fix */}
+          <div
+            onClick={() => {
+              window.open('mailto:support@readora.com?subject=Readora%20AI%20Help%20and%20Support', '_blank')
+            }}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', color: '#94a3b8' }}
+          >
             <span>❓</span> Help & Support
           </div>
 
@@ -359,7 +414,7 @@ export default function ReadoraAIChatPage() {
                       <div style={{ background: '#091024', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '18px', padding: '16px 20px', color: '#e2e8f0', fontSize: '14px', lineHeight: 1.6 }}>
                         <div style={{ whiteSpace: 'pre-wrap' }}>{m.content}</div>
 
-                        {/* Clickable Sources (if any) */}
+                        {/* Clickable Sources */}
                         {m.sources && m.sources.length > 0 && (
                           <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                             <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 'bold', marginBottom: '8px' }}>
@@ -403,13 +458,35 @@ export default function ReadoraAIChatPage() {
 
         {/* 3. Bottom Fixed Input Bar */}
         <div style={{ position: 'absolute', bottom: '0', left: 0, right: 0, background: 'linear-gradient(to top, #050a15 70%, transparent)', padding: '16px 32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          
+          {/* File Selected Badge */}
+          {selectedFile && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#0f172a', border: '1px solid rgba(56,189,248,0.3)', padding: '4px 12px', borderRadius: '20px', marginBottom: '8px', fontSize: '12px', color: '#38bdf8' }}>
+              <span>🖼️ {selectedFile.name}</span>
+              <span onClick={() => setSelectedFile(null)} style={{ cursor: 'pointer', fontWeight: 'bold' }}>✕</span>
+            </div>
+          )}
+
+          {/* Hidden File Picker Input */}
+          <input
+            type="file"
+            accept="image/*"
+            ref={fileInputRef}
+            style={{ display: 'none' }}
+            onChange={e => {
+              if (e.target.files && e.target.files[0]) {
+                setSelectedFile(e.target.files[0])
+              }
+            }}
+          />
+
           <form
             onSubmit={e => { e.preventDefault(); sendMessage(); }}
             style={{
               maxWidth: '820px',
               width: '100%',
               background: '#0a1329',
-              border: '1px solid rgba(56,189,248,0.2)',
+              border: isListening ? '1px solid #ef4444' : '1px solid rgba(56,189,248,0.2)',
               borderRadius: '35px',
               padding: '6px 10px 6px 18px',
               display: 'flex',
@@ -418,15 +495,38 @@ export default function ReadoraAIChatPage() {
               boxShadow: '0 8px 30px rgba(0,0,0,0.5)',
             }}
           >
-            <span style={{ color: '#64748b', cursor: 'pointer', fontSize: '18px' }} title="Attachment">📎</span>
+            {/* Gallery Attachment Icon */}
+            <span
+              onClick={() => fileInputRef.current?.click()}
+              style={{ color: '#64748b', cursor: 'pointer', fontSize: '18px' }}
+              title="Upload Image from Gallery"
+            >
+              📎
+            </span>
+
             <input
               type="text"
-              placeholder="Ask anything..."
+              placeholder={isListening ? 'Bolna shuru karein (Listening...)...' : 'Ask anything...'}
               value={inputVal}
               onChange={e => setInputVal(e.target.value)}
               style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#fff', fontSize: '14px' }}
             />
-            <span style={{ color: '#64748b', cursor: 'pointer', fontSize: '16px' }} title="Voice">🎤</span>
+
+            {/* Voice Input Microphone Icon */}
+            <span
+              onClick={handleVoiceInput}
+              style={{
+                color: isListening ? '#ef4444' : '#64748b',
+                cursor: 'pointer',
+                fontSize: '18px',
+                transition: 'transform 0.2s',
+                transform: isListening ? 'scale(1.2)' : 'scale(1)',
+              }}
+              title="Voice Input"
+            >
+              🎙️️
+            </span>
+
             <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(139,92,246,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', color: '#c084fc' }}>
               ✨
             </div>
@@ -459,4 +559,4 @@ export default function ReadoraAIChatPage() {
       </main>
     </div>
   )
-              }
+                   }
