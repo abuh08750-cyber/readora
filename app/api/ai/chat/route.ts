@@ -44,14 +44,16 @@ export async function POST(req: Request) {
     let assistantReply = ''
 
     if (!apiKey) {
-      assistantReply = 'Vercel settings me GEMINI_API_KEY missing hai.'
+      assistantReply = 'Vercel settings में GEMINI_API_KEY मौजूद नहीं है।'
     } else {
-      // Interactions API ke sath recommended models
+      // Models to try with Interactions API
       const modelsToTry = [
         'gemini-3.0-flash',
         'gemini-3.1-pro-preview',
         'gemini-2.5-flash',
         'gemini-2.0-flash'
+        'gemini-3.5-flash-lite'
+        'gemini-3.7-flash'
       ]
 
       let lastError = ''
@@ -65,7 +67,7 @@ export async function POST(req: Request) {
             body: JSON.stringify({
               model: model,
               input: message,
-              context: 'You are Readora AI, a friendly library assistant for the Readora eBook platform. Provide clear markdown answers.'
+              system_instruction: 'You are Readora AI, a friendly library assistant for the Readora eBook platform. Provide clear markdown answers.'
             })
           })
 
@@ -122,4 +124,5 @@ export async function POST(req: Request) {
       sources: [],
     })
   }
-}
+        }
+        
