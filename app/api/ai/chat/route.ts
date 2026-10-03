@@ -46,32 +46,50 @@ export async function POST(req: Request) {
     if (!apiKey) {
       assistantReply = 'Vercel settings me GEMINI_API_KEY missing hai.'
     } else {
-      try {
-        // Official Interactions API endpoint
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/interactions?key=${apiKey}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            input: message,
-            system_instruction: 'You are Readora AI, a helpful library assistant for the Readora eBook platform. Provide clear markdown answers.'
+      // Interactions API ke sath recommended models
+      const modelsToTry = [
+        'gemini-3.0-flash',
+        'gemini-3.1-pro-preview',
+        'gemini-2.5-flash',
+        'gemini-2.0-flash'
+      ]
+
+      let lastError = ''
+      for (const model of modelsToTry) {
+        try {
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/interactions?key=${apiKey}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: model,
+              input: message,
+              context: 'You are Readora AI, a friendly library assistant for the Readora eBook platform. Provide clear markdown answers.'
+            })
           })
-        })
 
-        const data = await res.json()
+          const data = await res.json()
 
-        if (data.output?.text) {
-          assistantReply = data.output.text
-        } else if (data.outputs && data.outputs[0]?.text) {
-          assistantReply = data.outputs[0].text
-        } else if (data.error) {
-          assistantReply = `API Details: ${data.error.message || JSON.stringify(data.error)}`
-        } else {
-          assistantReply = JSON.stringify(data)
+          if (data.output?.text) {
+            assistantReply = data.output.text
+            break
+          } else if (data.outputs && data.outputs[0]?.text) {
+            assistantReply = data.outputs[0].text
+            break
+          } else if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+            assistantReply = data.candidates[0].content.parts[0].text
+            break
+          } else if (data.error) {
+            lastError = data.error.message || 'API error'
+          }
+        } catch (e: any) {
+          lastError = e.message || 'Network error'
         }
-      } catch (err: any) {
-        assistantReply = `Connection error: ${err.message || 'Failed to fetch'}`
+      }
+
+      if (!assistantReply) {
+        assistantReply = `Gemini Error: ${lastError || 'Response generate nahi ho saka.'}`
       }
     }
 
@@ -104,5 +122,4 @@ export async function POST(req: Request) {
       sources: [],
     })
   }
-        }
-              
+}
