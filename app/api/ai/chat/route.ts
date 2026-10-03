@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     const userId = session.user.id
     let convId = conversationId
 
-    // 1. New conversation create karein
+    // 1. New conversation
     if (!convId) {
       const title = message.slice(0, 36) + (message.length > 36 ? '...' : '')
       const { data: newConv } = await supabase
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // 2. User message insert karein
+    // 2. User message save
     if (convId) {
       await supabase.from('ai_messages').insert({
         conversation_id: convId,
@@ -46,10 +46,11 @@ export async function POST(req: Request) {
     let assistantReply = ''
 
     if (!apiKey) {
-      assistantReply = 'Vercel settings mein GEMINI_API_KEY missing hai. Kripya environment variable check karein.'
+      assistantReply = 'Vercel madhe GEMINI_API_KEY set keli nahiye. Krupiya environment variable check kara.'
     } else {
       try {
-        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`
+        // v1 endpoint cha upyog
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`
         
         const response = await fetch(geminiUrl, {
           method: 'POST',
@@ -73,16 +74,16 @@ export async function POST(req: Request) {
         if (geminiData.candidates && geminiData.candidates[0]?.content?.parts?.[0]?.text) {
           assistantReply = geminiData.candidates[0].content.parts[0].text
         } else if (geminiData.error) {
-          assistantReply = `Gemini API Error: ${geminiData.error.message || 'API request failed'}`
+          assistantReply = `Gemini Error: ${geminiData.error.message || 'API request failed'}`
         } else {
-          assistantReply = 'Maaf kijiye, abhi uttar taiyar nahi ho paya. Dobara koshish karein.'
+          assistantReply = 'Kshama kara, uttar tayar hou shakle nahi. Krupaya punha prayatna kara.'
         }
       } catch (err: any) {
-        assistantReply = `AI service connect nahi ho saki: ${err.message || 'Network error'}`
+        assistantReply = `AI service connect zali nahi: ${err.message || 'Network error'}`
       }
     }
 
-    // 3. AI assistant response save karein
+    // 3. AI assistant response save
     if (convId) {
       await supabase.from('ai_messages').insert({
         conversation_id: convId,
@@ -111,5 +112,5 @@ export async function POST(req: Request) {
       sources: [],
     })
   }
-    }
+             }
           
