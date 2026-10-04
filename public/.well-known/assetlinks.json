@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.readora.app",
+    "sha256_cert_fingerprints": ["18:EE:42:2B:73:04:2B:0B:AA:68:4A:D5:10:D1:64:1A:56:C2:5B:3C:11:0E:AF:E5:8A:64:09:F3:BF:1B:CB:D7"]
+  }
+}]
