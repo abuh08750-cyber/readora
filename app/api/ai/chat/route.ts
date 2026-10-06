@@ -47,6 +47,10 @@ export async function POST(req: Request) {
       assistantReply = 'Vercel settings me GEMINI_API_KEY missing hai.'
     } else {
       const model = 'gemini-3.8-flash'
+      const model = 'gemini-3.7-flash'
+      const model = 'gemini-1.5-flash'
+      const model = 'gemini-3.5-flash-lite'
+      const model = 'gemini-3.8-flash-lite
       const maxRetries = 3
       let lastError = ''
 
